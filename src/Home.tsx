@@ -1,18 +1,20 @@
-// Home.tsx
+// src/Home.tsx
 import React, { useEffect, useState } from 'react';
-import { getPlanes } from './api';
+import { getProtected } from './api'; // Importa getProtected en lugar de getPlanes
+import { useNavigate } from 'react-router-dom'; // Importa useNavigate para redireccionar
 
 interface Plan {
-  id: string | number; // Puede ser string o number según tu API
+  id: string | number;
   nombre: string;
   precio: number;
-  // Agrega aquí cualquier otra propiedad que tus planes tengan
+  // Agrega otras propiedades del Plan si las tienes
 }
 
 export default function Home() {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate(); // Inicializa useNavigate
 
   useEffect(() => {
     const fetchPlanes = async () => {
@@ -20,24 +22,33 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const data = await getPlanes();
+        // Intenta obtener los planes utilizando la función protegida
+        const data = await getProtected();
 
         if (Array.isArray(data)) {
           setPlanes(data);
         } else {
-          setError("La API no devolvió un formato de planes esperado (no es un arreglo).");
-          console.error("Respuesta inesperada de getPlanes:", data);
+          setError("La API no devolvió un formato de planes esperado.");
+          console.error("Respuesta inesperada de getProtected:", data);
         }
       } catch (err: any) {
-        setError(`Error al cargar los planes: ${err.message}`);
-        console.error("Error al llamar a getPlanes:", err);
+        // Manejo específico para errores de autenticación/autorización
+        if (err.message.includes('Sesión expirada') || err.message.includes('no autorizada') || err.message.includes('Token no encontrado')) {
+          setError('Tu sesión ha expirado o no estás autorizado. Por favor, inicia sesión.');
+          navigate('/login'); // Redirige al usuario a la página de login
+        } else {
+          setError(`Error al cargar los planes: ${err.message || 'Error desconocido'}`);
+        }
+        console.error("Error al llamar a getProtected:", err);
       } finally {
         setLoading(false);
       }
     };
 
+    // Llama a fetchPlanes solo si el usuario está autenticado, o si necesitas forzar el inicio de sesión
+    // Considera que si no hay token al cargar Home, se redirigirá al login
     fetchPlanes();
-  }, []);
+  }, [navigate]); // Añade 'navigate' como dependencia para el useEffect
 
   if (loading) {
     return (
