@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './Home';
 import Login from './Login';
+import Register from './Register'; // <--- Importa Register
 import Dashboard from './Dashboard';
 
 export default function App() {
@@ -21,6 +22,9 @@ export default function App() {
                 <Link className="nav-link fs-5" to="/login">Login</Link>
               </li>
               <li className="nav-item">
+                <Link className="nav-link fs-5" to="/register">Register</Link>  {/* <-- Enlace nuevo */}
+              </li>
+              <li className="nav-item">
                 <Link className="nav-link fs-5" to="/dashboard">Dashboard</Link>
               </li>
             </ul>
@@ -32,6 +36,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />  {/* <-- Ruta nueva */}
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </div>
