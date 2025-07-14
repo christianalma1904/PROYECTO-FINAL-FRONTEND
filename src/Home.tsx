@@ -1,20 +1,18 @@
-// src/Home.tsx
 import React, { useEffect, useState } from 'react';
-import { getProtected } from './api'; // Importa getProtected en lugar de getPlanes
-import { useNavigate } from 'react-router-dom'; // Importa useNavigate para redireccionar
+import { getProtected } from './api';
+import { useNavigate } from 'react-router-dom';
 
 interface Plan {
   id: string | number;
   nombre: string;
   precio: number;
-  // Agrega otras propiedades del Plan si las tienes
 }
 
 export default function Home() {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate(); // Inicializa useNavigate
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPlanes = async () => {
@@ -22,7 +20,6 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        // Intenta obtener los planes utilizando la función protegida
         const data = await getProtected();
 
         if (Array.isArray(data)) {
@@ -32,10 +29,9 @@ export default function Home() {
           console.error("Respuesta inesperada de getProtected:", data);
         }
       } catch (err: any) {
-        // Manejo específico para errores de autenticación/autorización
-        if (err.message.includes('Sesión expirada') || err.message.includes('no autorizada') || err.message.includes('Token no encontrado')) {
+        if (err.message?.toLowerCase().includes('expirad') || err.message?.toLowerCase().includes('autorizad') || err.message?.toLowerCase().includes('token')) {
           setError('Tu sesión ha expirado o no estás autorizado. Por favor, inicia sesión.');
-          navigate('/login'); // Redirige al usuario a la página de login
+          navigate('/login');
         } else {
           setError(`Error al cargar los planes: ${err.message || 'Error desconocido'}`);
         }
@@ -45,44 +41,49 @@ export default function Home() {
       }
     };
 
-    // Llama a fetchPlanes solo si el usuario está autenticado, o si necesitas forzar el inicio de sesión
-    // Considera que si no hay token al cargar Home, se redirigirá al login
     fetchPlanes();
-  }, [navigate]); // Añade 'navigate' como dependencia para el useEffect
-
-  if (loading) {
-    return (
-      <div className="container mt-5">
-        <h1>Planes Nutricionales</h1>
-        <p>Cargando planes...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mt-5">
-        <h1>Planes Nutricionales</h1>
-        <p style={{ color: 'red' }}>Error: {error}</p>
-        <p>Por favor, revisa la consola del navegador y el terminal de tu backend para más detalles.</p>
-      </div>
-    );
-  }
+  }, [navigate]);
 
   return (
-    <div className="container mt-5">
-      <h1>Planes Nutricionales</h1>
-      <ul className="list-group">
-        {planes.length > 0 ? (
-          planes.map(plan => (
-            <li key={plan.id} className="list-group-item">
-              <strong>{plan.nombre}</strong> - ${plan.precio}
-            </li>
-          ))
-        ) : (
-          <p>No se encontraron planes disponibles.</p>
-        )}
-      </ul>
+    <div className="container py-5">
+      <div className="row mb-4">
+        <div className="col text-center">
+          <h1 className="fw-bold">Planes Nutricionales</h1>
+          <p className="text-secondary">¡Conoce nuestros planes y elige el ideal para ti!</p>
+        </div>
+      </div>
+      <div className="row justify-content-center">
+        <div className="col-md-8 col-lg-6">
+          <div className="card shadow-lg border-0">
+            <div className="card-header bg-success text-white">
+              <h5 className="mb-0">Planes disponibles</h5>
+            </div>
+            <ul className="list-group list-group-flush">
+              {loading && (
+                <li className="list-group-item text-center">
+                  <div className="spinner-border text-success" role="status">
+                    <span className="visually-hidden">Cargando...</span>
+                  </div>
+                </li>
+              )}
+              {error && (
+                <li className="list-group-item text-danger text-center">{error}</li>
+              )}
+              {!loading && !error && planes.length === 0 && (
+                <li className="list-group-item text-center text-muted">
+                  No se encontraron planes disponibles.
+                </li>
+              )}
+              {!loading && !error && planes.map(plan => (
+                <li key={plan.id} className="list-group-item d-flex justify-content-between align-items-center">
+                  <span className="fw-semibold">{plan.nombre}</span>
+                  <span className="badge bg-primary fs-6">${plan.precio}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
