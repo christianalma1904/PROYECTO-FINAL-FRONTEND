@@ -1,14 +1,14 @@
 // src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { getPlanes } from '../api/planes'; // Asegúrate de que esta ruta sea correcta
+import { getPlanes } from '../api/planes'; 
 import { useAuth } from '../context/AuthContext'; 
 
 interface Plan {
   id: number;
   nombre: string;
   descripcion: string;
-  precio: number;
-  // Agrega otras propiedades del plan si las tienes
+  // CORREGIDO: Asegúrate de que 'precio' sea un número en la interfaz
+  precio: number; 
 }
 
 export default function Dashboard() {
@@ -19,16 +19,23 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchPlanes() {
-      // Aunque getPlanes no toma 'token' como argumento, la lógica de `isAuthenticated` y `token` del contexto
-      // sigue siendo útil para decidir si intentar cargar los planes o mostrar un error de autenticación.
-      if (!isAuthenticated || !token) { // Verificar si el usuario está autenticado antes de intentar cargar
+      if (!isAuthenticated || !token) {
         setError("No autenticado. Por favor, inicia sesión.");
         setLoading(false);
         return;
       }
       try {
-        const data = await getPlanes(); // <--- CORREGIDO: Llamada sin argumentos
-        setPlanes(data);
+        const data = await getPlanes();
+        // Opcional: Si sabes que el backend podría enviar precio como string,
+        // puedes mapear los datos para convertirlo aquí
+        const formattedPlanes = data.map(plan => ({
+          ...plan,
+          // CORRECCIÓN: Asegúrate de que plan.precio sea un número.
+          // Usamos parseFloat para convertirlo si viene como string.
+          // Si ya es un número, parseFloat no lo afectará.
+          precio: parseFloat(plan.precio as any) // 'as any' para evitar error de TS si lo lee como string
+        }));
+        setPlanes(formattedPlanes); // Usa los planes formateados
       } catch (err: any) {
         console.error("Error al cargar planes:", err);
         setError(err.message || "Error al cargar los planes.");
@@ -38,7 +45,7 @@ export default function Dashboard() {
     }
 
     fetchPlanes();
-  }, [isAuthenticated, token]); // Dependencias para re-ejecutar cuando isAuthenticated o token cambien
+  }, [isAuthenticated, token]);
 
   if (loading) {
     return <div className="container mt-5">Cargando planes...</div>;
@@ -61,7 +68,8 @@ export default function Dashboard() {
                 <div className="card-body">
                   <h5 className="card-title">{plan.nombre}</h5>
                   <p className="card-text">{plan.descripcion}</p>
-                  <p className="card-text"><strong>Precio: ${plan.precio.toFixed(2)}</strong></p>
+                  {/* CORRECCIÓN: Asegúrate de que plan.precio es un número antes de toFixed */}
+                  <p className="card-text"><strong>Precio: ${plan.precio ? plan.precio.toFixed(2) : 'N/A'}</strong></p>
                 </div>
               </div>
             </div>

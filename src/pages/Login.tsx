@@ -1,23 +1,9 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Importa LoginSuccessResponse junto con la función login
 import { login as apiLogin, LoginSuccessResponse } from '../api/auth'; 
 import { useAuth } from '../context/AuthContext';
-import { jwtDecode } from 'jwt-decode';
-
-// Interfaz para el objeto 'claims' dentro del token JWT
-// Asegúrate de que 'role' coincida con la clave de rol en tu token JWT.
-interface DecodedToken {
-  sub: number; // Subject (generalmente el ID del usuario)
-  role: string; // ¡Esta es la clave para el rol!
-  iat: number; // Issued At
-  exp: number; // Expiration
-  // Agrega otras propiedades si tu token contiene más información útil (ej. 'email')
-}
-
-// ELIMINA ESTA INTERFAZ YA QUE AHORA IMPORTAS LoginSuccessResponse
-// interface LoginResponse { /* ... */ } 
+// No necesitas jwtDecode aquí directamente, ya lo usa AuthContext
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -33,16 +19,16 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Ahora 'data' será de tipo LoginSuccessResponse que sí tiene 'access_token' y 'user'
       const data: LoginSuccessResponse = await apiLogin(email, password); 
 
       if (data && data.access_token) {
-        // Llama a la función login del contexto para manejar el token y el usuario
-        // El contexto se encargará de guardar en localStorage y actualizar el estado global
-        authContextLogin(data.access_token, data.user); // <--- ¡PASANDO EL OBJETO user COMPLETO!
+        // Llama a la función login del contexto, pasándole solo el access_token
+        // El contexto se encargará de decodificar el token y guardar la info del usuario.
+        authContextLogin(data.access_token); // <--- MODIFICADO: SOLO PASAMOS EL TOKEN
 
         navigate('/dashboard'); // Redirige después de que el contexto actualice el estado
       } else {
+        // Este else ahora es menos probable que se active si la API siempre devuelve access_token
         setError('Respuesta de login inválida: no se recibió un token de acceso.');
       }
     } catch (err: any) {
