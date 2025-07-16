@@ -2,13 +2,21 @@
 const API = process.env.REACT_APP_API_URL;
 
 // Esta función se encarga de obtener el token de localStorage
-const headers = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}` // Obtiene el token aquí
-});
+// CORRECCION: Incluida la funcion getAuthHeaders
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // Es crucial lanzar un error si no hay token, para que el frontend lo maneje.
+    throw new Error("No hay token de autenticación disponible. Inicia sesión.");
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}` // Obtiene el token aquí
+  };
+};
 
 // Interfaz para el Plan (asegúrate de que sea consistente)
-interface Plan {
+export interface Plan {
   id: number;
   nombre: string;
   descripcion: string;
@@ -16,42 +24,39 @@ interface Plan {
   // Agrega otras propiedades del plan si las tienes
 }
 
-// CORREGIDO: getPlanes NO ACEPTA ARGUMENTOS
-export async function getPlanes(): Promise<Plan[]> { // <--- SIN ARGUMENTOS AQUÍ
-  return fetch(`${API}/planes`, { headers: headers() })
-    .then(res => {
-      if (!res.ok) {
-        // Manejo de errores similar al de auth.ts para consistencia
-        return res.json().then(errorData => {
-          throw new Error(errorData.message || 'Error al obtener los planes');
-        });
-      }
-      return res.json();
-    })
-    .catch(error => {
-      console.error("Error en la función getPlanes:", error);
-      throw error;
+export async function getPlanes(): Promise<Plan[]> {
+  try {
+    const res = await fetch(`${API}/planes`, {
+      method: 'GET',
+      headers: getAuthHeaders(), // Utiliza la función getAuthHeaders()
     });
-}
 
-// CORREGIDO: createPlan NO ACEPTA EL TOKEN COMO ARGUMENTO
-export async function createPlan(plan: any): Promise<any> { // <--- SIN ARGUMENTO 'token' AQUÍ
-  return fetch(`${API}/planes`, {
-    method: 'POST',
-    headers: headers(), // Utiliza la función headers() que ya incluye el token
-    body: JSON.stringify(plan)
-  })
-  .then(res => {
     if (!res.ok) {
-      // Manejo de errores
-      return res.json().then(errorData => {
-        throw new Error(errorData.message || 'Error al crear el plan');
-      });
+      const errorData = await res.json().catch(() => ({ message: 'Error desconocido' }));
+      throw new Error(errorData.message || 'Error al obtener los planes');
     }
     return res.json();
-  })
-  .catch(error => {
+  } catch (error) {
+    console.error("Error en la función getPlanes:", error);
+    throw error;
+  }
+}
+
+export async function createPlan(plan: any): Promise<any> {
+  try {
+    const res = await fetch(`${API}/planes`, {
+      method: 'POST',
+      headers: getAuthHeaders(), // Utiliza la función getAuthHeaders()
+      body: JSON.stringify(plan)
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ message: 'Error desconocido' }));
+      throw new Error(errorData.message || 'Error al crear el plan');
+    }
+    return res.json();
+  } catch (error) {
     console.error("Error en la función createPlan:", error);
     throw error;
-  });
+  }
 }

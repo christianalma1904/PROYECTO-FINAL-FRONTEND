@@ -1,54 +1,71 @@
 // src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { getPlanes } from '../api/planes'; 
-import { useAuth } from '../context/AuthContext'; 
+import { getPlanes, Plan } from '../api/planes';
+import { useAuth } from '../context/AuthContext';
 
-interface Plan {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  // CORREGIDO: Asegúrate de que 'precio' sea un número en la interfaz
-  precio: number; 
-}
+// Importa las funciones y tipos para Dietas y Seguimiento
+import { getMyDietas, Dieta } from '../api/dietas';
+import { getMySeguimiento, SeguimientoEntry } from '../api/seguimiento';
+
 
 export default function Dashboard() {
-  const { token, user, isAuthenticated } = useAuth(); 
+  const { token, user, isAuthenticated } = useAuth();
   const [planes, setPlanes] = useState<Plan[]>([]);
+  const [dietas, setDietas] = useState<Dieta[]>([]);
+  const [seguimiento, setSeguimiento] = useState<SeguimientoEntry[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchPlanes() {
-      if (!isAuthenticated || !token) {
-        setError("No autenticado. Por favor, inicia sesión.");
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+
+      if (!isAuthenticated || !token || !user?.id) { // Asegúrate de que user.id exista
+        setError("No autenticado o ID de usuario no disponible. Por favor, inicia sesión para ver tus datos.");
         setLoading(false);
+        console.log("Dashboard: Usuario no autenticado o token/user.id ausente. No se cargan datos.");
         return;
       }
+
       try {
-        const data = await getPlanes();
-        // Opcional: Si sabes que el backend podría enviar precio como string,
-        // puedes mapear los datos para convertirlo aquí
-        const formattedPlanes = data.map(plan => ({
+        // Cargar Planes
+        console.log("Dashboard: Cargando planes...");
+        const planesData = await getPlanes();
+        const formattedPlanes = planesData.map(plan => ({
           ...plan,
-          // CORRECCIÓN: Asegúrate de que plan.precio sea un número.
-          // Usamos parseFloat para convertirlo si viene como string.
-          // Si ya es un número, parseFloat no lo afectará.
-          precio: parseFloat(plan.precio as any) // 'as any' para evitar error de TS si lo lee como string
+          // Asegúrate de que plan.precio es un string o number. Convierte a number si es string.
+          precio: typeof plan.precio === 'string' ? parseFloat(plan.precio) : plan.precio
         }));
-        setPlanes(formattedPlanes); // Usa los planes formateados
+        setPlanes(formattedPlanes);
+        console.log("Dashboard: Planes cargados:", formattedPlanes);
+
+        // Cargar Dietas del usuario logueado
+        console.log("Dashboard: Intentando cargar dietas para el usuario:", user.id);
+        const dietasData = await getMyDietas(user.id); // <-- PASA user.id AQUI
+        setDietas(dietasData);
+        console.log("Dashboard: Dietas cargadas:", dietasData);
+
+        // Cargar Seguimiento del usuario logueado
+        console.log("Dashboard: Intentando cargar seguimiento para el usuario:", user.id);
+        const seguimientoData = await getMySeguimiento(user.id); // <-- PASA user.id AQUI
+        setSeguimiento(seguimientoData);
+        console.log("Dashboard: Seguimiento cargado:", seguimientoData);
+
       } catch (err: any) {
-        console.error("Error al cargar planes:", err);
-        setError(err.message || "Error al cargar los planes.");
+        console.error("Dashboard: Error al cargar datos:", err);
+        setError(err.message || "Error al cargar los datos del Dashboard.");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPlanes();
-  }, [isAuthenticated, token]);
+    fetchData();
+  }, [isAuthenticated, token, user]); // Añadido user a las dependencias.
 
   if (loading) {
-    return <div className="container mt-5">Cargando planes...</div>;
+    return <div className="container mt-5">Cargando datos del Dashboard...</div>;
   }
 
   if (error) {
@@ -57,7 +74,7 @@ export default function Dashboard() {
 
   return (
     <div className="container mt-5">
-      <h1>Dashboard</h1>
+      <h1>Dashboard de {user?.email || "Usuario"}</h1>
 
       <h2>Planes</h2>
       <div className="row">
@@ -68,7 +85,6 @@ export default function Dashboard() {
                 <div className="card-body">
                   <h5 className="card-title">{plan.nombre}</h5>
                   <p className="card-text">{plan.descripcion}</p>
-                  {/* CORRECCIÓN: Asegúrate de que plan.precio es un número antes de toFixed */}
                   <p className="card-text"><strong>Precio: ${plan.precio ? plan.precio.toFixed(2) : 'N/A'}</strong></p>
                 </div>
               </div>
@@ -79,11 +95,59 @@ export default function Dashboard() {
         )}
       </div>
 
-      <h2>Mis Dietas</h2>
-      <p>Aquí se mostrarán tus dietas asignadas.</p>
+      {/* Sección de Mis Dietas */}
+      <h2 className="mt-4">Mis Dietas</h2>
+      <div className="row">
+        {dietas.length > 0 ? (
+          dietas.map((dieta) => (
+            // Asegúrate de que _id o id existan en tu interfaz Dieta
+            <div key={dieta._id || dieta.id} className="col-md-6 mb-4">
+              <div className="card">
+                <div className="card-body">
+                  <h5 className="card-title">{dieta.nombre}</h5>
+                  <p className="card-text">{dieta.descripcion}</p>
+                  <p className="card-text">ID Paciente: {dieta.paciente_id}</p>
+                  {dieta.plan_id && <p className="card-text">ID Plan: {dieta.plan_id}</p>}
+                  <p className="card-text"><small className="text-muted">Asignada el: {dieta.fechaAsignacion || 'N/A'}</small></p>
+                  {dieta.semanas && dieta.semanas.length > 0 && (
+                    <>
+                      <h6>Semanas:</h6>
+                      <ul>
+                        {dieta.semanas.map((s, idx) => (
+                          <li key={idx}>Semana {s.semana}: {s.menu.join(', ')}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="col-12">No tienes dietas asignadas en este momento.</p>
+        )}
+      </div>
 
-      <h2>Mi Seguimiento</h2>
-      <p>Aquí podrás ver tu progreso.</p>
+      {/* Sección de Mi Seguimiento */}
+      <h2 className="mt-4">Mi Seguimiento</h2>
+      <div className="row">
+        {seguimiento.length > 0 ? (
+          seguimiento.map((entry) => (
+            // Asegúrate de que _id o id existan en tu interfaz SeguimientoEntry
+            <div key={entry._id || entry.id} className="col-md-6 mb-4">
+              <div className="card">
+                <div className="card-body">
+                  <h5 className="card-title">Fecha: {entry.fecha}</h5>
+                  <p className="card-text">Peso: {entry.peso} kg</p>
+                  {entry.observaciones && <p className="card-text">Observaciones: {entry.observaciones}</p>}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="col-12">No hay registros de seguimiento disponibles.</p>
+        )}
+      </div>
     </div>
   );
 }
