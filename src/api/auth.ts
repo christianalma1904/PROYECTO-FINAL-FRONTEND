@@ -4,7 +4,7 @@
 const API = process.env.REACT_APP_API_URL; // Asegúrate de que esta variable de entorno esté configurada
 
 // Interfaz para la respuesta exitosa del login
-interface LoginSuccessResponse {
+export interface LoginSuccessResponse { // <--- ¡EXPORTADA AHORA!
   access_token: string;
   user: {
     id: string;
@@ -16,7 +16,7 @@ interface LoginSuccessResponse {
 }
 
 // Interfaz para la respuesta exitosa del registro
-interface RegisterSuccessResponse {
+export interface RegisterSuccessResponse { // También exportada por consistencia si se usa en otro lado
   message: string; // O lo que sea que tu API devuelva al registrar
   // ... otras propiedades
 }
@@ -42,7 +42,9 @@ export async function login(email: string, password: string): Promise<LoginSucce
       throw new Error(errorData.message || 'Error al iniciar sesión');
     }
 
-    return res.json(); // Parsea el JSON si la respuesta fue exitosa
+    // Parsea el JSON si la respuesta fue exitosa
+    // Se espera que la respuesta JSON coincida con LoginSuccessResponse
+    return res.json();
   } catch (error) {
     console.error("Error en la función login:", error);
     throw error; // Propaga el error para que sea manejado en el componente Login.tsx
@@ -69,18 +71,14 @@ export async function register(nombre: string, email: string, password: string):
   }
 }
 
-// *** AÑADIDA LA FUNCIÓN getProtected A ESTE ARCHIVO ***
-// Esto resolverá el error: "export 'getProtected' ... was not found in '../api/auth'"
 export async function getProtected(): Promise<any> { // Considera tipar 'any' con una interfaz específica
   const token = localStorage.getItem('token');
   if (!token) {
-    // Lanza un error si no hay token, lo cual debería ser capturado por el componente
     throw new Error('No se encontró un token. Acceso no autorizado.');
   }
 
   try {
-    // ¡IMPORTANTE! AJUSTA LA URL DE ESTE ENDPOINT A TU RUTA REAL DE DATOS PROTEGIDOS
-    const res = await fetch(`${API}/dashboard-data`, { // <-- ¡AJUSTA ESTE ENDPOINT!
+    const res = await fetch(`${API}/dashboard-data`, { // <-- ¡AJUSTA ESTE ENDPOINT SI ES NECESARIO!
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -96,6 +94,6 @@ export async function getProtected(): Promise<any> { // Considera tipar 'any' co
     return res.json();
   } catch (error) {
     console.error("Error al obtener datos protegidos:", error);
-    throw error; // Propaga el error
+    throw error;
   }
 }

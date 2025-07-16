@@ -1,106 +1,81 @@
 // src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { getPlanes } from '../api/planes'; // Asegúrate de que esta ruta sea correcta
+import { useAuth } from '../context/AuthContext'; 
 
-// Importaciones de tus componentes que están en la misma carpeta 'pages'
-import Planes from './Planes';
-import Pacientes from './Pacientes';
-import Nutricionistas from './Nutricionistas';
-import Pagos from './Pagos';
-import Dietas from './Dietas';
-import Seguimiento from './Seguimiento';
-
-// ¡IMPORTACIÓN DE LA API CORREGIDA!
-// HE CAMBIADO 'data' A 'auth'.
-// SI TU FUNCIÓN 'getProtected' ESTÁ EN UN ARCHIVO DIFERENTE DENTRO DE 'src/api',
-// POR FAVOR, CAMBIA 'auth' POR EL NOMBRE DE ESE ARCHIVO (ej. 'planes', 'nutricionistas', etc.).
-import { getProtected } from '../api/auth'; // <--- ¡RUTA CORREGIDA!
-
-// Define los tipos de datos. Mantenemos los que ya definimos.
-interface User {
-  rol: string;
-  // Añade otras propiedades que tu objeto 'user' tenga, e.g.: id: string; name: string;
+interface Plan {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  // Agrega otras propiedades del plan si las tienes
 }
-
-type Plan = {
-  id: string; // O el tipo de ID real, e.g., number
-  name: string;
-  description?: string;
-  price?: number;
-  // ... otras propiedades de tus planes
-};
-
-interface ApiDataResponse {
-  items: Plan[]; // Ajusta si la respuesta tiene otra estructura
-}
-
 
 export default function Dashboard() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [data, setData] = useState<Plan[]>([]);
+  const { token, user, isAuthenticated } = useAuth(); 
+  const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // --- MANEJO SEGURO DEL USUARIO DESDE localStorage ---
-    const userString = localStorage.getItem('user');
-    let user: User | null = null; 
-
-    if (userString) {
+    async function fetchPlanes() {
+      // Aunque getPlanes no toma 'token' como argumento, la lógica de `isAuthenticated` y `token` del contexto
+      // sigue siendo útil para decidir si intentar cargar los planes o mostrar un error de autenticación.
+      if (!isAuthenticated || !token) { // Verificar si el usuario está autenticado antes de intentar cargar
+        setError("No autenticado. Por favor, inicia sesión.");
+        setLoading(false);
+        return;
+      }
       try {
-        user = JSON.parse(userString);
-      } catch (e) {
-        console.error("Error al analizar los datos de usuario desde localStorage:", e);
-        localStorage.removeItem('user');
+        const data = await getPlanes(); // <--- CORREGIDO: Llamada sin argumentos
+        setPlanes(data);
+      } catch (err: any) {
+        console.error("Error al cargar planes:", err);
+        setError(err.message || "Error al cargar los planes.");
+      } finally {
+        setLoading(false);
       }
     }
-    
-    // CORRECCIÓN para TS2345: Asegura que el valor sea estrictamente boolean
-    setIsAdmin(!!(user && user.rol === 'admin')); 
 
+    fetchPlanes();
+  }, [isAuthenticated, token]); // Dependencias para re-ejecutar cuando isAuthenticated o token cambien
 
-    // --- LLAMADA A LA API ---
-    const token = localStorage.getItem('token');
-    // Si Dashboard hace una llamada a una API protegida y requiere ser admin y tener token
-    // Ajusta la lógica 'user && user.rol === 'admin' && token' según tus necesidades
-    if (user && user.rol === 'admin' && token) {
-      getProtected()
-        .then((res: ApiDataResponse | Plan[]) => { 
-          setData(Array.isArray(res) ? res : res.items ?? []);
-          setLoading(false);
-        })
-        .catch((error: any) => { // CORRECCIÓN para TS7006: Tipado explícito de 'error'
-          console.error("Error al cargar datos protegidos:", error);
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-      setData([]); 
-    }
+  if (loading) {
+    return <div className="container mt-5">Cargando planes...</div>;
+  }
 
-  }, []); // Dependencias vacías para que se ejecute solo al montar el componente
-
+  if (error) {
+    return <div className="container mt-5 alert alert-danger">{error}</div>;
+  }
 
   return (
     <div className="container mt-5">
       <h1>Dashboard</h1>
-      {loading ? (
-        <p>Cargando información...</p>
-      ) : isAdmin ? (
-        <>
-          <Planes admin={true}/>
-          <Pacientes />
-          <Nutricionistas />
-          <Pagos />
-          <Dietas />
-          <Seguimiento />
-        </>
-      ) : (
-        <>
-          <Planes admin={false}/>
-          <Dietas />
-          <Seguimiento />
-        </>
-      )}
+
+      <h2>Planes</h2>
+      <div className="row">
+        {planes.length > 0 ? (
+          planes.map((plan) => (
+            <div key={plan.id} className="col-md-6 mb-4">
+              <div className="card">
+                <div className="card-body">
+                  <h5 className="card-title">{plan.nombre}</h5>
+                  <p className="card-text">{plan.descripcion}</p>
+                  <p className="card-text"><strong>Precio: ${plan.precio.toFixed(2)}</strong></p>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="col-12">No hay planes disponibles en este momento.</p>
+        )}
+      </div>
+
+      <h2>Mis Dietas</h2>
+      <p>Aquí se mostrarán tus dietas asignadas.</p>
+
+      <h2>Mi Seguimiento</h2>
+      <p>Aquí podrás ver tu progreso.</p>
     </div>
   );
 }

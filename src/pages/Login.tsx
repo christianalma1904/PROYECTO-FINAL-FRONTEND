@@ -1,8 +1,10 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/auth';
-import { jwtDecode } from 'jwt-decode'; // ¡Importa jwtDecode!
+// Importa LoginSuccessResponse junto con la función login
+import { login as apiLogin, LoginSuccessResponse } from '../api/auth'; 
+import { useAuth } from '../context/AuthContext';
+import { jwtDecode } from 'jwt-decode';
 
 // Interfaz para el objeto 'claims' dentro del token JWT
 // Asegúrate de que 'role' coincida con la clave de rol en tu token JWT.
@@ -14,11 +16,8 @@ interface DecodedToken {
   // Agrega otras propiedades si tu token contiene más información útil (ej. 'email')
 }
 
-// Interfaz para la respuesta esperada de la función 'login' en src/api/auth.ts
-// Ahora esperamos que solo venga el access_token directamente.
-interface LoginResponse {
-  access_token: string;
-}
+// ELIMINA ESTA INTERFAZ YA QUE AHORA IMPORTAS LoginSuccessResponse
+// interface LoginResponse { /* ... */ } 
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,55 +25,31 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login: authContextLogin } = useAuth(); // Obtén la función login del contexto
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); // Previene el comportamiento por defecto del formulario
-    setError(null); // Limpia cualquier error previo
-    setLoading(true); // Activa el indicador de carga
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
     try {
-      // La función 'login' ahora solo devuelve { access_token: string }
-      const data: LoginResponse = await login(email, password); 
+      // Ahora 'data' será de tipo LoginSuccessResponse que sí tiene 'access_token' y 'user'
+      const data: LoginSuccessResponse = await apiLogin(email, password); 
 
       if (data && data.access_token) {
-        localStorage.setItem('token', data.access_token);
+        // Llama a la función login del contexto para manejar el token y el usuario
+        // El contexto se encargará de guardar en localStorage y actualizar el estado global
+        authContextLogin(data.access_token, data.user); // <--- ¡PASANDO EL OBJETO user COMPLETO!
 
-        // *** Decodifica el token para obtener la información del usuario ***
-        try {
-          const decoded: DecodedToken = jwtDecode(data.access_token);
-          
-          // Crea un objeto 'user' para guardar en localStorage.
-          // Es crucial que 'rol' se mapee correctamente a 'role' del token
-          // y que 'id' se mapee a 'sub' del token.
-          const user = {
-            id: String(decoded.sub), // Asegúrate de que el ID sea string si así lo esperas
-            rol: decoded.role,      // Obtenemos el rol directamente del token
-            email: email,           // El email no está en el token que me mostraste, lo tomamos del input
-            // Puedes añadir 'name' o 'username' si el token los contiene o si los obtienes de otra forma
-          };
-          localStorage.setItem('user', JSON.stringify(user));
-
-          navigate('/dashboard');
-
-        } catch (decodeError) {
-          console.error("Error al decodificar el token:", decodeError);
-          setError('Error al procesar el token de autenticación. Inténtalo de nuevo.');
-          localStorage.removeItem('token'); // Limpia el token si no se pudo decodificar
-          localStorage.removeItem('user'); // Limpia el user también
-          setLoading(false);
-          return; // Detiene la ejecución si hay error en la decodificación
-        }
-
+        navigate('/dashboard'); // Redirige después de que el contexto actualice el estado
       } else {
-        // Este error se mostrará si 'data' es nulo o si no tiene 'access_token'
         setError('Respuesta de login inválida: no se recibió un token de acceso.');
       }
-    } catch (err: any) { // Captura cualquier error lanzado por la función 'login'
+    } catch (err: any) {
       console.error("Error en el inicio de sesión:", err);
-      // Muestra un mensaje de error más específico
       setError(err.message || "Error al iniciar sesión. Por favor, verifica tus credenciales.");
     } finally {
-      setLoading(false); // Desactiva el indicador de carga
+      setLoading(false);
     }
   }
 
