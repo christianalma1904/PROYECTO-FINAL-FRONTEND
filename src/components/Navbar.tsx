@@ -1,47 +1,64 @@
-// src/components/Navbar.tsx
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Importa useNavigate
-import { useAuth } from '../context/AuthContext'; // ¡Importa useAuth!
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth(); // Obtén user, isAuthenticated y logout del contexto
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout(); // Llama a la función logout del contexto
-    navigate('/login'); // Redirige al login después de cerrar sesión
+    logout();
+    navigate('/login');
   };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light">
-      <div className="container-fluid">
+      <div className="container">
         <Link className="navbar-brand" to="/">Nutri Plans</Link>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto">
+
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon" />
+        </button>
+
+        <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
+          <ul className="navbar-nav align-items-center">
             <li className="nav-item">
-              <Link className="nav-link" to="/">Home</Link>
+              <Link className="nav-link" to="/">Inicio</Link>
             </li>
-            {isAuthenticated ? ( // Usa isAuthenticated para mostrar las opciones condicionalmente
+
+            {isAuthenticated ? (
               <>
                 <li className="nav-item">
                   <Link className="nav-link" to="/dashboard">Dashboard</Link>
                 </li>
-                {user?.email && ( // Muestra el email si está disponible
+                {user?.name || user?.email ? (
                   <li className="nav-item">
-                    <span className="nav-link">Bienvenido, {user.email}</span>
+                    <span className="nav-link disabled">
+                      Bienvenido, <strong>{user.name || user.email}</strong>
+                    </span>
                   </li>
-                )}
+                ) : null}
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={handleLogout}>Logout</button>
+                  <button className="btn btn-link nav-link" onClick={handleLogout}>
+                    Cerrar sesión
+                  </button>
                 </li>
               </>
-            ) : ( // Muestra opciones si el usuario no está logueado
+            ) : (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/login">Login</Link>
+                  <Link className="nav-link" to="/login">Iniciar sesión</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/register">Register</Link>
+                  <Link className="nav-link" to="/register">Registrarse</Link>
                 </li>
               </>
             )}

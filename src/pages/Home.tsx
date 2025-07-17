@@ -9,12 +9,16 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getPlanes().then(setPlanes);
+    getPlanes()
+      .then(setPlanes)
+      .catch((error) => {
+        console.error("Error al obtener los planes:", error);
+        alert("No se pudo cargar los planes. Inicia sesión si es necesario.");
+      });
   }, []);
 
   function handleComprar(planId: number) {
     if (!token) navigate('/login');
-    // Aquí puedes abrir el flujo de pagos
     alert(`Ir a pagar plan #${planId} (ejemplo)`);
   }
 
