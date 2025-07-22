@@ -13,7 +13,7 @@ export default function UserMenu() {
   return (
     <div className="d-flex align-items-center gap-2 ms-3">
       <span className="text-muted small">
-        Bienvenido, <strong>{user?.name || user?.email}</strong>
+        <strong>{user?.name || user?.email}</strong>
       </span>
       <button className="btn btn-sm btn-outline-danger" onClick={handleLogout}>
         Cerrar sesión
