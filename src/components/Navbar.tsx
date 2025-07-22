@@ -1,20 +1,14 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import UserMenu from './UserMenu';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { isAuthenticated } = useAuth();
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
       <div className="container">
-        <Link className="navbar-brand" to="/">Nutri Plans</Link>
+        <Link className="navbar-brand fw-bold" to="/">Nutri Plans</Link>
 
         <button
           className="navbar-toggler"
@@ -39,17 +33,26 @@ export default function Navbar() {
                 <li className="nav-item">
                   <Link className="nav-link" to="/dashboard">Dashboard</Link>
                 </li>
-                {user?.name || user?.email ? (
-                  <li className="nav-item">
-                    <span className="nav-link disabled">
-                      Bienvenido, <strong>{user.name || user.email}</strong>
-                    </span>
-                  </li>
-                ) : null}
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={handleLogout}>
-                    Cerrar sesión
-                  </button>
+                  <Link className="nav-link" to="/planes">Planes</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/dietas">Dietas</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/seguimiento">Seguimiento</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/pacientes">Pacientes</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/nutricionistas">Nutricionistas</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/pagos">Pagos</Link>
+                </li>
+                <li className="nav-item">
+                  <UserMenu />
                 </li>
               </>
             ) : (

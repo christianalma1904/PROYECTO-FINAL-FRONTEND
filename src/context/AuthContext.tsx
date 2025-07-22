@@ -1,9 +1,16 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { jwtDecode } from 'jwt-decode';
+// src/context/AuthContext.tsx
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  ReactNode
+} from "react";
+import { jwtDecode } from "jwt-decode";
 
 // Tipado del token decodificado
 interface DecodedJWT {
-  sub: number;
+  sub: string | number;
   role: string;
   exp: number;
   email?: string;
@@ -11,7 +18,7 @@ interface DecodedJWT {
   [key: string]: any;
 }
 
-// Usuario que se guarda en el contexto y localStorage
+// Usuario dentro del sistema
 interface User {
   id: string;
   rol: string;
@@ -19,7 +26,7 @@ interface User {
   name?: string;
 }
 
-// Estructura del contexto
+// Tipo del contexto
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -35,94 +42,76 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const storedUser = localStorage.getItem('user');
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch (e) {
-      console.error("Error al parsear usuario de localStorage:", e);
-      localStorage.removeItem('user');
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      localStorage.removeItem("user");
       return null;
     }
   });
 
-  const handleLogin = (accessToken: string) => {
+  const decodeToken = (accessToken: string): User | null => {
     try {
       const decoded: DecodedJWT = jwtDecode(accessToken);
+      if (decoded.exp * 1000 < Date.now()) return null;
 
-      // Validación de expiración del token antes de guardar
-      if (decoded.exp * 1000 < Date.now()) {
-        console.warn("Intento de login con token expirado.");
-        handleLogout();
-        return;
-      }
-
-      const userData: User = {
+      return {
         id: String(decoded.sub),
         rol: decoded.role,
-        email: decoded.email || '',
-        name: decoded.name
+        email: decoded.email || "",
+        name: decoded.name,
       };
-
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setToken(accessToken);
-      setUser(userData);
-    } catch (error) {
-      console.error("Error al decodificar el token JWT durante el login:", error);
-      handleLogout();
+    } catch (err) {
+      console.error("Token inválido:", err);
+      return null;
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const login = (accessToken: string) => {
+    const userData = decodeToken(accessToken);
+    if (!userData) {
+      logout();
+      return;
+    }
+
+    localStorage.setItem("token", accessToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setToken(accessToken);
+    setUser(userData);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   };
 
   useEffect(() => {
     if (token) {
-      try {
-        const decoded: DecodedJWT = jwtDecode(token);
-
-        if (decoded.exp * 1000 < Date.now()) {
-          console.log("Token expirado, cerrando sesión.");
-          handleLogout();
-        } else {
-          if (!user || !user.id) {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-              const parsedUser = JSON.parse(storedUser);
-              setUser(parsedUser);
-            } else {
-              const userData: User = {
-                id: String(decoded.sub),
-                rol: decoded.role,
-                email: decoded.email || '',
-                name: decoded.name
-              };
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
-            }
-          }
+      const userDecoded = decodeToken(token);
+      if (userDecoded) {
+        if (!user) {
+          setUser(userDecoded);
+          localStorage.setItem("user", JSON.stringify(userDecoded));
         }
-      } catch (error) {
-        console.error("Error al validar token en useEffect:", error);
-        handleLogout();
+      } else {
+        logout();
       }
     } else if (user) {
-      handleLogout(); // Inconsistencia: hay user pero no token
+      logout(); // Hay user pero no token => inconsistencia
     }
-  }, [token, user]);
+  }, [token]);
 
   const contextValue: AuthContextType = {
     user,
     token,
-    login: handleLogin,
-    logout: handleLogout,
-    isAuthenticated: !!token && !!user
+    login,
+    logout,
+    isAuthenticated: !!token && !!user,
   };
 
   return (
@@ -132,10 +121,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  }
+  if (!context) throw new Error("useAuth debe usarse dentro de <AuthProvider>");
   return context;
 };

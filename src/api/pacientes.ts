@@ -1,15 +1,21 @@
+import { getAuthHeaders } from "./utils";
+
 const API = process.env.REACT_APP_API_URL;
-const headers = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+
 export async function getPacientes() {
-  return fetch(`${API}/pacientes`, { headers: headers() }).then(res => res.json());
+  const res = await fetch(`${API}/pacientes`, {
+    headers: getAuthHeaders(),
+  });
+
+  return res.json();
 }
+
 export async function createPaciente(paciente: any) {
-  return fetch(`${API}/pacientes`, {
+  const res = await fetch(`${API}/pacientes`, {
     method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(paciente)
-  }).then(res => res.json());
+    headers: getAuthHeaders(),
+    body: JSON.stringify(paciente),
+  });
+
+  return res.json();
 }

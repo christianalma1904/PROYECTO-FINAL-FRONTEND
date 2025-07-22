@@ -1,15 +1,20 @@
+import { getAuthHeaders } from "./utils";
 const API = process.env.REACT_APP_API_URL;
-const headers = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+
 export async function getPagos() {
-  return fetch(`${API}/pagos`, { headers: headers() }).then(res => res.json());
+  const res = await fetch(`${API}/pagos`, {
+    headers: getAuthHeaders(),
+  });
+
+  return res.json();
 }
+
 export async function createPago(pago: any) {
-  return fetch(`${API}/pagos`, {
+  const res = await fetch(`${API}/pagos`, {
     method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(pago)
-  }).then(res => res.json());
+    headers: getAuthHeaders(),
+    body: JSON.stringify(pago),
+  });
+
+  return res.json();
 }

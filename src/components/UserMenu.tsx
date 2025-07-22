@@ -1,24 +1,21 @@
-import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function UserMenu() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate('/login'); // Redirige al login después de cerrar sesión
+    navigate('/login');
   };
 
-  if (!isAuthenticated) return null;
-
   return (
-    <div className="d-flex align-items-center gap-3">
-      <span className="text-muted">
+    <div className="d-flex align-items-center gap-2 ms-3">
+      <span className="text-muted small">
         Bienvenido, <strong>{user?.name || user?.email}</strong>
       </span>
-      <button className="btn btn-outline-danger btn-sm" onClick={handleLogout}>
+      <button className="btn btn-sm btn-outline-danger" onClick={handleLogout}>
         Cerrar sesión
       </button>
     </div>
