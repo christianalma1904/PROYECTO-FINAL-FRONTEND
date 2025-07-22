@@ -1,73 +1,57 @@
+// src/components/Navbar.tsx
+
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import UserMenu from './UserMenu';
+import UserMenu from './UserMenu'; // Asumo que este componente sigue existiendo y es funcional
 
-export default function Navbar() {
+// Importa los componentes de react-bootstrap
+import { Navbar, Nav, Container } from 'react-bootstrap';
+
+// Renombra el componente de Navbar a AppNavbar para evitar conflicto de nombres con el import de react-bootstrap
+export default function AppNavbar() {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate(); // Necesario si UserMenu no maneja la navegación directamente para Cerrar Sesión
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
-      <div className="container">
-        <Link className="navbar-brand fw-bold" to="/">Nutri Plans</Link>
+    // Usa el componente Navbar de react-bootstrap
+    <Navbar bg="light" expand="lg" className="shadow-sm">
+      <Container>
+        {/* Navbar.Brand es para el logo/nombre de la marca. Usamos 'as={Link}' para integrar react-router-dom */}
+        <Navbar.Brand as={Link} to="/">Nutri Plans</Navbar.Brand>
 
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon" />
-        </button>
+        {/* Navbar.Toggle es el botón hamburguesa. 'aria-controls' debe coincidir con el 'id' de Navbar.Collapse */}
+        <Navbar.Toggle aria-controls="responsive-navbar-nav" />
 
-        <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
-          <ul className="navbar-nav align-items-center">
-            <li className="nav-item">
-              <Link className="nav-link" to="/">Inicio</Link>
-            </li>
+        {/* Navbar.Collapse es el contenido que se oculta/muestra al hacer clic en el botón hamburguesa */}
+        <Navbar.Collapse id="responsive-navbar-nav" className="justify-content-end">
+          {/* Nav agrupa los enlaces de navegación */}
+          <Nav className="align-items-center">
+            {/* Nav.Link es para los enlaces de navegación. Usamos 'as={Link}' para integrar react-router-dom */}
+            <Nav.Link as={Link} to="/">Inicio</Nav.Link>
 
             {isAuthenticated ? (
               <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/dashboard">Dashboard</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/planes">Planes</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/dietas">Dietas</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/seguimiento">Seguimiento</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/pacientes">Pacientes</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/nutricionistas">Nutricionistas</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/pagos">Pagos</Link>
-                </li>
-                <li className="nav-item">
-                  <UserMenu />
-                </li>
+                <Nav.Link as={Link} to="/dashboard">Dashboard</Nav.Link>
+                <Nav.Link as={Link} to="/planes">Planes</Nav.Link>
+                <Nav.Link as={Link} to="/dietas">Dietas</Nav.Link>
+                <Nav.Link as={Link} to="/seguimiento">Seguimiento</Nav.Link>
+                <Nav.Link as={Link} to="/pacientes">Pacientes</Nav.Link>
+                <Nav.Link as={Link} to="/nutricionistas">Nutricionistas</Nav.Link>
+                <Nav.Link as={Link} to="/pagos">Pagos</Nav.Link>
+                {/* UserMenu ahora debería ir dentro de un Nav.Item o directamente en Nav si UserMenu es solo el Dropdown */}
+                {/* Si UserMenu es un <li>, asegúrate de que no duplique el <li> */}
+                <UserMenu /> {/* Asumo que UserMenu es un componente que renderiza sus propios <li> o es un Dropdown */}
               </>
             ) : (
               <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/login">Iniciar sesión</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/register">Registrarse</Link>
-                </li>
+                <Nav.Link as={Link} to="/login">Iniciar sesión</Nav.Link>
+                <Nav.Link as={Link} to="/register">Registrarse</Nav.Link>
               </>
             )}
-          </ul>
-        </div>
-      </div>
-    </nav>
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 }
