@@ -10,15 +10,20 @@ export interface SemanaDieta {
 export interface Dieta {
   _id?: string;
   id?: string;
-  nombre: string;
-  descripcion: string;
+  nombre?: string; // Hago estos opcionales por ahora, si es que realmente NO se envían.
+  descripcion?: string; // Hago estos opcionales por ahora.
   paciente_id: string;
   plan_id?: string;
-  fechaAsignacion: string;
+  fechaAsignacion?: string; // Hago estos opcionales por ahora.
   semanas: SemanaDieta[];
 }
 
-export interface CreateDietaPayload extends Omit<Dieta, '_id' | 'id'> {}
+// Basado en tu Postman, este es el payload real para POST /dietas
+export interface CreateDietaPayload {
+  paciente_id: string;
+  plan_id?: string; // Asegúrate si es opcional u obligatorio en tu API
+  semanas: SemanaDieta[];
+}
 
 export async function getAllDietas(): Promise<Dieta[]> {
   const res = await fetch(`${API}/dietas`, {
@@ -40,15 +45,20 @@ export async function getMyDietas(userId: string): Promise<Dieta[]> {
 }
 
 export async function createDieta(dieta: CreateDietaPayload): Promise<Dieta> {
+  console.log("Enviando dieta:", JSON.stringify(dieta)); // Para depuración
   const res = await fetch(`${API}/dietas`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json', // <--- ¡AÑADE ESTO!
+    },
     body: JSON.stringify(dieta),
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(error.message || 'Error al crear dieta');
+    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido del servidor o respuesta no JSON' }));
+    console.error("Error al crear dieta:", errorBody); // Depuración del error completo
+    throw new Error(errorBody.message || 'Error al crear dieta');
   }
 
   return res.json();

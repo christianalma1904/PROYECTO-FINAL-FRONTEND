@@ -1,38 +1,128 @@
+// src/pages/Pacientes.tsx
 import { useEffect, useState } from 'react';
 import { getPacientes, createPaciente } from '../api/pacientes';
+import { useAuth } from '../context/AuthContext';
 
 export default function Pacientes() {
+  const { isAuthenticated, token } = useAuth();
   const [pacientes, setPacientes] = useState<any[]>([]);
-  const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({ nombre: '', email: '', password: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+  const fetchPacientes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getPacientes();
+      setPacientes(data);
+    } catch (err: any) {
+      setError('Error al obtener los pacientes.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    getPacientes().then(setPacientes);
-  }, []);
+    if (isAuthenticated && token) fetchPacientes();
+  }, [isAuthenticated, token]);
 
-  async function handleCreate() {
-    await createPaciente({ nombre, email, password });
-    getPacientes().then(setPacientes);
-    setNombre(''); setEmail(''); setPassword('');
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCreate = async () => {
+    try {
+      await createPaciente(form);
+      await fetchPacientes();
+      setForm({ nombre: '', email: '', password: '' });
+    } catch (err) {
+      alert('Error al crear el paciente.');
+    }
+  };
+
+  if (!isAuthenticated || !token) {
+    return (
+      <div className="container mt-5 alert alert-warning">
+        Por favor inicia sesión para visualizar los pacientes.
+      </div>
+    );
   }
 
-  if (!user || user.rol !== 'admin') return null;
-
   return (
-    <div className="mt-5">
-      <h3>Pacientes</h3>
-      <input className="form-control my-2" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
-      <input className="form-control my-2" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-      <input className="form-control my-2" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-      <button className="btn btn-success mb-3" onClick={handleCreate}>Crear Paciente</button>
-      <ul className="list-group">
-        {pacientes.map(p => (
-          <li key={p.id} className="list-group-item">{p.nombre} ({p.email})</li>
-        ))}
-      </ul>
+    <div className="container mt-5">
+      <h1 className="mb-4 text-center">Gestión de Pacientes 👥</h1>
+      <p className="text-muted text-center mb-4">
+        Administra la información de pacientes registrados en el sistema.
+      </p>
+
+      <div className="card shadow-sm p-4 mb-4">
+        <h4 className="mb-3">Agregar nuevo paciente</h4>
+        <div className="row">
+          <div className="col-md-4 mb-2">
+            <input
+              className="form-control"
+              placeholder="Nombre"
+              name="nombre"
+              value={form.nombre}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="col-md-4 mb-2">
+            <input
+              className="form-control"
+              placeholder="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="col-md-4 mb-2">
+            <input
+              className="form-control"
+              placeholder="Contraseña"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </div>
+        <button className="btn btn-success mt-3 w-100" onClick={handleCreate}>
+          Crear Paciente
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center">
+          <div className="spinner-border text-success" role="status" />
+          <p className="mt-2">Cargando pacientes...</p>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : (
+        <div className="row">
+          {pacientes.length > 0 ? (
+            pacientes.map((p) => (
+              <div key={p.id} className="col-md-4 mb-4">
+                <div className="card shadow h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">{p.nombre}</h5>
+                    <p className="card-text">📧 {p.email}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="col-12 text-center">No hay pacientes registrados actualmente.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

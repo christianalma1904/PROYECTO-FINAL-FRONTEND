@@ -1,4 +1,3 @@
-// src/pages/Seguimiento.tsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getMySeguimiento, createSeguimiento, SeguimientoEntry, CreateSeguimientoPayload } from '../api/seguimiento';
@@ -10,140 +9,172 @@ export default function Seguimiento() {
   const [error, setError] = useState<string | null>(null);
 
   const [peso, setPeso] = useState<number>(0);
-  const [observaciones, setObservaciones] = useState<string>('');
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]); // Fecha actual en YYYY-MM-DD
+  const [fecha, setFecha] = useState<string>('');
+  const [semana, setSemana] = useState<number>(1);
+  const [fotos, setFotos] = useState<string[]>([]); // <-- VUELVE A AÑADIR ESTA LÍNEA para el estado de fotos
 
-  useEffect(() => {
-    async function fetchSeguimiento() {
-      setLoading(true);
-      setError(null);
 
-      if (!isAuthenticated || !token || !user?.id) {
-        setError("No autenticado. Por favor, inicia sesión para ver tu seguimiento.");
-        setLoading(false);
-        return;
-      }
-      try {
-        // Pasa el user.id a getMySeguimiento
-        const data = await getMySeguimiento(user.id);
-        setSeguimiento(data);
-      } catch (err: any) {
-        console.error("Error al cargar seguimiento:", err);
-        setError(err.message || "Error al cargar los datos de seguimiento.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSeguimiento();
-  }, [isAuthenticated, token, user]); // Añadido user a las dependencias
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAuthenticated || !user?.id) {
-      alert("No estás autenticado para registrar un seguimiento.");
+  const fetchSeguimiento = async () => {
+    setLoading(true);
+    setError(null);
+    if (!isAuthenticated || !user || !user.id) {
+      setError("Usuario no autenticado o ID de usuario no disponible.");
+      setLoading(false);
       return;
     }
-
-    const newEntry: CreateSeguimientoPayload = {
-      paciente_id: user.id,
-      fecha: fecha,
-      peso: peso,
-      observaciones: observaciones,
-    };
-
     try {
-      await createSeguimiento(newEntry);
-      // Después de crear, recarga los datos
-      const updatedSeguimiento = await getMySeguimiento(user.id); // Pasa user.id al recargar
-      setSeguimiento(updatedSeguimiento);
-      // Limpia el formulario
-      setPeso(0);
-      setObservaciones('');
-      setFecha(new Date().toISOString().split('T')[0]); // Reinicia la fecha a hoy
-      alert('Registro de seguimiento añadido exitosamente!');
+      const seguimientoData = await getMySeguimiento(user.id);
+      setSeguimiento(seguimientoData);
     } catch (err: any) {
-      console.error("Error al añadir seguimiento:", err);
-      alert(`Error al añadir seguimiento: ${err.message}`);
+      console.error("Error al cargar seguimiento:", err);
+      setError("Ocurrió un problema al cargar el seguimiento.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="container mt-5">Cargando seguimiento...</div>;
-  }
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchSeguimiento();
+    }
+  }, [isAuthenticated, user?.id]);
 
-  if (error) {
-    return <div className="container mt-5 alert alert-danger">{error}</div>;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated || !user || !user.id) {
+      alert("No estás autenticado o tu ID de usuario no está disponible.");
+      return;
+    }
+
+    if (peso <= 0 || !fecha || semana <= 0) {
+        alert("Por favor, ingresa un peso válido, una fecha y una semana válida.");
+        return;
+    }
+
+    const payload: CreateSeguimientoPayload = {
+        peso: peso,
+        fecha: fecha,
+        paciente_id: user.id,
+        semana: semana,
+        fotos: fotos, // <-- VUELVE A AÑADIR ESTA LÍNEA en el payload (fotos es un array vacío por defecto)
+    };
+
+    try {
+      await createSeguimiento(payload);
+      setPeso(0);
+      setFecha('');
+      setSemana(1);
+      setFotos([]); // <-- VUELVE A AÑADIR ESTA LÍNEA para resetear el estado de fotos
+      await fetchSeguimiento();
+    } catch (error) {
+      alert('Error al agregar el registro de seguimiento.');
+      console.error('Error al crear seguimiento:', error);
+    }
+  };
+
+  if (!isAuthenticated || !token) {
+    return (
+      <div className="container mt-5 alert alert-warning">
+        Por favor inicia sesión para ver y registrar tu seguimiento.
+      </div>
+    );
   }
 
   return (
     <div className="container mt-5">
-      <h1>Mi Seguimiento de Peso</h1>
+      <h1 className="mb-4 text-center">Tu Seguimiento Personal 📈</h1>
+      <p className="text-muted text-center mb-4">
+        Registra tu progreso de peso y otros indicadores clave para alcanzar tus metas.
+      </p>
 
-      {/* Formulario para añadir nuevo registro */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h3>Añadir Nuevo Registro</h3>
-        </div>
-        <div className="card-body">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label htmlFor="fecha" className="form-label">Fecha</label>
+      {/* Formulario para agregar seguimiento */}
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div className="card shadow-sm p-4">
+          <h4 className="mb-3">Agregar nuevo registro de seguimiento</h4>
+          <div className="row">
+            <div className="col-md-4 mb-2">
               <input
-                type="date"
                 className="form-control"
-                id="fecha"
+                type="number"
+                step="0.1"
+                placeholder="Peso (kg)"
+                value={peso === 0 ? '' : peso}
+                onChange={(e) => setPeso(parseFloat(e.target.value))}
+                required
+              />
+            </div>
+            <div className="col-md-4 mb-2">
+              <input
+                className="form-control"
+                type="date"
+                placeholder="Fecha"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
                 required
               />
             </div>
-            <div className="mb-3">
-              <label htmlFor="peso" className="form-label">Peso (kg)</label>
+            <div className="col-md-4 mb-2">
               <input
-                type="number"
                 className="form-control"
-                id="peso"
-                value={peso}
-                onChange={(e) => setPeso(parseFloat(e.target.value))}
-                step="0.1"
+                type="number"
+                step="1"
+                placeholder="Semana"
+                value={semana === 0 ? '' : semana}
+                onChange={(e) => setSemana(parseInt(e.target.value))}
                 required
               />
             </div>
-            <div className="mb-3">
-              <label htmlFor="observaciones" className="form-label">Observaciones (Opcional)</label>
-              <textarea
+            {/* Si quieres un input para fotos, iría aquí. Por ahora, 'fotos' se envía como un array vacío por defecto. */}
+            {/* Ejemplo de input básico para una URL de foto (si solo se permite una) */}
+            {/* <div className="col-md-12 mb-2">
+              <input
                 className="form-control"
-                id="observaciones"
-                rows={3}
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-              ></textarea>
-            </div>
-            <button type="submit" className="btn btn-primary">Guardar Registro</button>
-          </form>
-        </div>
-      </div>
+                type="text"
+                placeholder="URL de foto (opcional)"
+                value={fotos[0] || ''} // Muestra la primera URL si existe
+                onChange={(e) => setFotos(e.target.value ? [e.target.value] : [])} // Guarda como array
+              />
+            </div> */}
 
-      {/* Lista de registros de seguimiento */}
-      <h2 className="mt-4">Historial de Seguimiento</h2>
-      <div className="row">
-        {seguimiento.length > 0 ? (
-          // Ordenar por fecha descendente para mostrar el más reciente primero
-          seguimiento.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((entry) => (
-            <div key={entry._id || entry.id} className="col-md-6 mb-4">
-              <div className="card">
-                <div className="card-body">
-                  <h5 className="card-title">Fecha: {entry.fecha}</h5>
-                  <p className="card-text">Peso: {entry.peso} kg</p>
-                  {entry.observaciones && <p className="card-text">Observaciones: {entry.observaciones}</p>}
-                </div>
-              </div>
+          </div>
+          <button className="btn btn-success mt-3 w-100" type="submit">
+            Agregar Registro
+          </button>
+        </div>
+      </form>
+
+      {loading ? (
+        <div className="text-center">
+          <div className="spinner-border text-success" role="status" />
+          <p className="mt-2">Cargando tu historial de seguimiento...</p>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : (
+        <div className="row">
+          {seguimiento.length > 0 ? (
+            <div className="col-12">
+              <h4 className="mb-3">Historial de Seguimiento</h4>
+              <ul className="list-group">
+                {seguimiento.map((entry) => (
+                  <li key={entry._id || entry.id} className="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>Fecha:</strong> {new Date(entry.fecha).toLocaleDateString()} -{' '}
+                      <strong>Peso:</strong> {entry.peso} kg -{' '}
+                      <strong>Semana:</strong> {entry.semana}
+                      {entry.fotos && entry.fotos.length > 0 && ( // <-- Muestra fotos si existen
+                        <p className="mb-0 text-muted">Fotos: {entry.fotos.join(', ')}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-          ))
-        ) : (
-          <p className="col-12">No hay registros de seguimiento disponibles.</p>
-        )}
-      </div>
+          ) : (
+            <p className="col-12 text-center">Aún no hay registros de seguimiento. ¡Comienza a registrar tu progreso!</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

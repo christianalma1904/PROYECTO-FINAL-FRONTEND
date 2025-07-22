@@ -1,6 +1,7 @@
 // src/api/seguimiento.ts
+
 import { getAuthHeaders } from "./utils";
-const API = process.env.REACT_APP_API_URL;
+const API = process.env.REACT_APP_API_URL; // Asegúrate de que esta URL sea correcta y esté definida en tus variables de entorno.
 
 export interface SeguimientoEntry {
   _id?: string;
@@ -8,7 +9,8 @@ export interface SeguimientoEntry {
   paciente_id: string;
   fecha: string;
   peso: number;
-  observaciones?: string;
+  semana: number;
+  fotos: string[]; // <-- VUELVE A AÑADIDO: 'fotos' como array de strings
 }
 
 export interface CreateSeguimientoPayload extends Omit<SeguimientoEntry, '_id' | 'id'> {}

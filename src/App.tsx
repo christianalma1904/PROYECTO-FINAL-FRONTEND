@@ -19,6 +19,8 @@ import Pagos from './pages/Pagos';
 import Planes from './pages/Planes';
 import Dietas from './pages/Dietas';
 import Seguimiento from './pages/Seguimiento';
+import Pacientes from './pages/Pacientes';       // <-- IMPORTACIÓN DE PACIENTES
+import Nutricionistas from './pages/Nutricionistas'; // <-- IMPORTACIÓN DE NUTRICIONISTAS
 
 export default function App() {
   return (
@@ -61,6 +63,21 @@ export default function App() {
               <Seguimiento />
             </ProtectedRoute>
           } />
+
+          {/* NUEVAS RUTAS AGREGADAS */}
+          <Route path="/pacientes" element={
+            <ProtectedRoute>
+              <Pacientes />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/nutricionistas" element={
+            <ProtectedRoute>
+              <Nutricionistas />
+            </ProtectedRoute>
+          } />
+          {/* FIN DE NUEVAS RUTAS AGREGADAS */}
+
         </Routes>
       </AuthProvider>
     </BrowserRouter>

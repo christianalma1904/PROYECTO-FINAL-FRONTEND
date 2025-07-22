@@ -1,4 +1,6 @@
+// src/api/planes.ts
 import { getAuthHeaders } from './utils';
+
 const API = process.env.REACT_APP_API_URL;
 
 export interface Plan {
@@ -8,6 +10,7 @@ export interface Plan {
   precio: number;
 }
 
+// Obtener todos los planes
 export async function getPlanes(): Promise<Plan[]> {
   const res = await fetch(`${API}/planes`, {
     method: 'GET',
@@ -22,16 +25,52 @@ export async function getPlanes(): Promise<Plan[]> {
   return res.json();
 }
 
-export async function createPlan(plan: any): Promise<any> {
+// Crear un nuevo plan
+export async function createPlan(plan: Omit<Plan, 'id'>): Promise<Plan> {
   const res = await fetch(`${API}/planes`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(plan),
   });
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ message: 'Error desconocido' }));
     throw new Error(errorData.message || 'Error al crear el plan');
+  }
+
+  return res.json();
+}
+
+// Eliminar un plan
+export async function deletePlan(id: number): Promise<void> {
+  const res = await fetch(`${API}/planes/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Error desconocido' }));
+    throw new Error(errorData.message || 'Error al eliminar el plan');
+  }
+}
+
+// Actualizar un plan
+export async function updatePlan(id: number, plan: Omit<Plan, 'id'>): Promise<Plan> {
+  const res = await fetch(`${API}/planes/${id}`, {
+    method: 'PUT',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(plan),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Error desconocido' }));
+    throw new Error(errorData.message || 'Error al actualizar el plan');
   }
 
   return res.json();

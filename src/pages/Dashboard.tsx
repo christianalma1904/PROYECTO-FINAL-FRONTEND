@@ -1,19 +1,14 @@
-// src/pages/Dashboard.tsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getPlanes, Plan } from '../api/planes';
-import { useAuth } from '../context/AuthContext';
-
-// Importa las funciones y tipos para Dietas y Seguimiento
 import { getMyDietas, Dieta } from '../api/dietas';
 import { getMySeguimiento, SeguimientoEntry } from '../api/seguimiento';
-
+import { useAuth } from '../context/AuthContext';
 
 export default function Dashboard() {
   const { token, user, isAuthenticated } = useAuth();
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [dietas, setDietas] = useState<Dieta[]>([]);
   const [seguimiento, setSeguimiento] = useState<SeguimientoEntry[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,50 +17,38 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      if (!isAuthenticated || !token || !user?.id) { // Asegúrate de que user.id exista
-        setError("No autenticado o ID de usuario no disponible. Por favor, inicia sesión para ver tus datos.");
+      if (!isAuthenticated || !token || !user?.id) {
+        setError("Por favor inicia sesión para acceder al dashboard.");
         setLoading(false);
-        console.log("Dashboard: Usuario no autenticado o token/user.id ausente. No se cargan datos.");
         return;
       }
 
       try {
-        // Cargar Planes
-        console.log("Dashboard: Cargando planes...");
         const planesData = await getPlanes();
-        const formattedPlanes = planesData.map(plan => ({
-          ...plan,
-          // Asegúrate de que plan.precio es un string o number. Convierte a number si es string.
-          precio: typeof plan.precio === 'string' ? parseFloat(plan.precio) : plan.precio
-        }));
-        setPlanes(formattedPlanes);
-        console.log("Dashboard: Planes cargados:", formattedPlanes);
+        const dietasData = await getMyDietas(user.id);
+        const seguimientoData = await getMySeguimiento(user.id);
 
-        // Cargar Dietas del usuario logueado
-        console.log("Dashboard: Intentando cargar dietas para el usuario:", user.id);
-        const dietasData = await getMyDietas(user.id); // <-- PASA user.id AQUI
+        setPlanes(planesData);
         setDietas(dietasData);
-        console.log("Dashboard: Dietas cargadas:", dietasData);
-
-        // Cargar Seguimiento del usuario logueado
-        console.log("Dashboard: Intentando cargar seguimiento para el usuario:", user.id);
-        const seguimientoData = await getMySeguimiento(user.id); // <-- PASA user.id AQUI
         setSeguimiento(seguimientoData);
-        console.log("Dashboard: Seguimiento cargado:", seguimientoData);
-
       } catch (err: any) {
-        console.error("Dashboard: Error al cargar datos:", err);
-        setError(err.message || "Error al cargar los datos del Dashboard.");
+        console.error(err);
+        setError("Error al cargar los datos del Dashboard.");
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [isAuthenticated, token, user]); // Añadido user a las dependencias.
+  }, [isAuthenticated, token, user]);
 
   if (loading) {
-    return <div className="container mt-5">Cargando datos del Dashboard...</div>;
+    return (
+      <div className="container text-center mt-5">
+        <div className="spinner-border text-success" role="status" />
+        <p className="mt-3">Cargando tu información...</p>
+      </div>
+    );
   }
 
   if (error) {
@@ -73,48 +56,56 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mt-5">
-      <h1>Dashboard de {user?.email || "Usuario"}</h1>
+    <div className="container mt-4 mb-5">
+      <h1 className="mb-4">Bienvenido, <strong>{user?.name || user?.email}</strong></h1>
 
-      <h2>Planes</h2>
-      <div className="row">
-        {planes.length > 0 ? (
-          planes.map((plan) => (
-            <div key={plan.id} className="col-md-6 mb-4">
-              <div className="card">
-                <div className="card-body">
-                  <h5 className="card-title">{plan.nombre}</h5>
-                  <p className="card-text">{plan.descripcion}</p>
-                  <p className="card-text"><strong>Precio: ${plan.precio ? plan.precio.toFixed(2) : 'N/A'}</strong></p>
-                </div>
-              </div>
+      {/* Resumen general */}
+      <div className="row text-center mb-5">
+        <div className="col-md-4">
+          <div className="card bg-light shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title">📋 Planes disponibles</h5>
+              <p className="display-6">{planes.length}</p>
             </div>
-          ))
-        ) : (
-          <p className="col-12">No hay planes disponibles en este momento.</p>
-        )}
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card bg-light shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title">🍎 Mis Dietas</h5>
+              <p className="display-6">{dietas.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card bg-light shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title">📈 Registros</h5>
+              <p className="display-6">{seguimiento.length}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Sección de Mis Dietas */}
-      <h2 className="mt-4">Mis Dietas</h2>
+      {/* Sección de dietas */}
+      <h2 className="mb-3">📋 Mis Dietas</h2>
       <div className="row">
         {dietas.length > 0 ? (
           dietas.map((dieta) => (
-            // Asegúrate de que _id o id existan en tu interfaz Dieta
             <div key={dieta._id || dieta.id} className="col-md-6 mb-4">
-              <div className="card">
+              <div className="card shadow-sm h-100">
                 <div className="card-body">
                   <h5 className="card-title">{dieta.nombre}</h5>
-                  <p className="card-text">{dieta.descripcion}</p>
-                  <p className="card-text">ID Paciente: {dieta.paciente_id}</p>
-                  {dieta.plan_id && <p className="card-text">ID Plan: {dieta.plan_id}</p>}
-                  <p className="card-text"><small className="text-muted">Asignada el: {dieta.fechaAsignacion || 'N/A'}</small></p>
-                  {dieta.semanas && dieta.semanas.length > 0 && (
+                  <p>{dieta.descripcion}</p>
+                  <p><strong>Asignada:</strong> {dieta.fechaAsignacion || 'N/A'}</p>
+                  {dieta.semanas?.length > 0 && (
                     <>
-                      <h6>Semanas:</h6>
+                      <h6>Menú semanal:</h6>
                       <ul>
-                        {dieta.semanas.map((s, idx) => (
-                          <li key={idx}>Semana {s.semana}: {s.menu.join(', ')}</li>
+                        {dieta.semanas.map((semana, index) => (
+                          <li key={index}>
+                            Semana {semana.semana}: {semana.menu.join(', ')}
+                          </li>
                         ))}
                       </ul>
                     </>
@@ -124,30 +115,32 @@ export default function Dashboard() {
             </div>
           ))
         ) : (
-          <p className="col-12">No tienes dietas asignadas en este momento.</p>
+          <p>No tienes dietas asignadas.</p>
         )}
       </div>
 
-      {/* Sección de Mi Seguimiento */}
-      <h2 className="mt-4">Mi Seguimiento</h2>
+      {/* Sección de seguimiento */}
+      <h2 className="mt-5 mb-3">📊 Mi Seguimiento</h2>
       <div className="row">
         {seguimiento.length > 0 ? (
           seguimiento.map((entry) => (
-            // Asegúrate de que _id o id existan en tu interfaz SeguimientoEntry
             <div key={entry._id || entry.id} className="col-md-6 mb-4">
-              <div className="card">
+              <div className="card shadow-sm">
                 <div className="card-body">
-                  <h5 className="card-title">Fecha: {entry.fecha}</h5>
-                  <p className="card-text">Peso: {entry.peso} kg</p>
-                  {entry.observaciones && <p className="card-text">Observaciones: {entry.observaciones}</p>}
+                  <h5 className="card-title">📅 {entry.fecha}</h5>
+                  <p><strong>Peso:</strong> {entry.peso} kg</p>
+                  {/* ELIMINADA la referencia a 'observaciones' */}
+                  {/* {entry.observaciones && <p><strong>Nota:</strong> {entry.observaciones}</p>} */}
+                  {/* AÑADIDA la referencia a 'semana', que ahora sí existe en SeguimientoEntry */}
+                  <p><strong>Semana:</strong> {entry.semana}</p>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <p className="col-12">No hay registros de seguimiento disponibles.</p>
+          <p>No hay registros de seguimiento todavía.</p>
         )}
       </div>
     </div>
   );
-}
+} 
