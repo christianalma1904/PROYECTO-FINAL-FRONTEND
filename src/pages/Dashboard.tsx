@@ -97,7 +97,16 @@ export default function Dashboard() {
                 <div className="card-body">
                   <h5 className="card-title">{dieta.nombre}</h5>
                   <p>{dieta.descripcion}</p>
-                  <p><strong>Asignada:</strong> {dieta.fechaAsignacion || 'N/A'}</p>
+                  <p>
+                    <strong>Asignada:</strong>{' '}
+                    {dieta.fechaAsignacion
+                      ? new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : 'N/A'}
+                  </p>
                   {dieta.semanas?.length > 0 && (
                     <>
                       <h6>Menú semanal:</h6>
@@ -127,7 +136,17 @@ export default function Dashboard() {
             <div key={entry._id || entry.id} className="col-md-6 mb-4">
               <div className="card shadow-sm">
                 <div className="card-body">
-                  <h5 className="card-title">📅 {entry.fecha}</h5>
+                  {/* LÍNEA CORREGIDA PARA EL FORMATO DE FECHA EN SEGUIMIENTO */}
+                  <h5 className="card-title">
+                    📅{' '}
+                    {entry.fecha
+                      ? new Date(entry.fecha).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : 'N/A'}
+                  </h5>
                   <p><strong>Peso:</strong> {entry.peso} kg</p>
                   {/* ELIMINADA la referencia a 'observaciones' */}
                   {/* {entry.observaciones && <p><strong>Nota:</strong> {entry.observaciones}</p>} */}
@@ -143,4 +162,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-} 
+}

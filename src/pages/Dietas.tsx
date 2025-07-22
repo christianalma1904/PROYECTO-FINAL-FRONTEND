@@ -1,24 +1,27 @@
 // src/pages/Dietas.tsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-// Importa CreateDietaPayload aquí
 import { Dieta, getAllDietas, createDieta, SemanaDieta, CreateDietaPayload } from '../api/dietas';
 import { getPlanes, Plan } from '../api/planes';
+import { getPacientes, Paciente } from '../api/pacientes'; // <-- Asegúrate de que esta línea esté presente
 
 export default function Dietas() {
   const { token, isAuthenticated, user } = useAuth();
   const [dietas, setDietas] = useState<Dieta[]>([]);
   const [planes, setPlanes] = useState<Plan[]>([]);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // *** CAMBIO CLAVE AQUÍ: Usar CreateDietaPayload directamente ***
-  const [newDieta, setNewDieta] = useState<CreateDietaPayload>({
-    // Eliminamos 'nombre', 'descripcion', 'fechaAsignacion' de la inicialización
-    paciente_id: user?.id || '', // Asegúrate de que user.id existe al inicializar
+  const [newDietaPayload, setNewDietaPayload] = useState<Omit<CreateDietaPayload, 'nombre' | 'descripcion' | 'fechaAsignacion'>>({
+    paciente_id: user?.id || '',
     semanas: [],
     plan_id: ''
   });
+
+  const [dietaNombre, setDietaNombre] = useState<string>('');
+  const [dietaDescripcion, setDietaDescripcion] = useState<string>('');
+  const [dietaFechaAsignacion, setDietaFechaAsignacion] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const [newSemana, setNewSemana] = useState<SemanaDieta>({ semana: 1, menu: [] });
   const [newMenuItem, setNewMenuItem] = useState<string>('');
@@ -29,15 +32,17 @@ export default function Dietas() {
       setError(null);
 
       try {
-        const [dietasData, planesData] = await Promise.all([
+        const [dietasData, planesData, pacientesData] = await Promise.all([
           getAllDietas(),
           getPlanes(),
+          getPacientes(), // Esto ya estaba bien en la última versión que te di
         ]);
 
         setDietas(dietasData);
         setPlanes(planesData);
+        setPacientes(pacientesData); // Esto ya estaba bien
       } catch (err: any) {
-        setError('Error al cargar dietas o planes.');
+        setError('Error al cargar dietas, planes o pacientes.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -45,19 +50,21 @@ export default function Dietas() {
     }
 
     if (isAuthenticated && token) fetchData();
-    // También asegúrate de que si el user.id cambia después de la primera renderización,
-    // el paciente_id se actualice si es necesario, o que user.id esté disponible pronto.
-    if (user?.id && newDieta.paciente_id === '') {
-        setNewDieta(prev => ({ ...prev, paciente_id: user.id }));
+    if (user?.id && newDietaPayload.paciente_id === '') {
+        setNewDietaPayload(prev => ({ ...prev, paciente_id: user.id }));
     }
-  }, [isAuthenticated, token, user?.id, newDieta.paciente_id]); // Añadir user.id a las dependencias
+  }, [isAuthenticated, token, user?.id, newDietaPayload.paciente_id]);
 
-  // *** FUNCIONES QUE ESTABAN FALTANDO O ERAN INCOMPLETAS ***
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleDietaPayloadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-    // Solo actualiza los campos que existen en CreateDietaPayload
-    // TypeScript te avisará si intentas asignar 'nombre' o 'descripcion'
-    setNewDieta(prev => ({ ...prev, [name]: value }));
+    setNewDietaPayload(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleOtherInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'nombre') setDietaNombre(value);
+    else if (name === 'descripcion') setDietaDescripcion(value);
+    else if (name === 'fechaAsignacion') setDietaFechaAsignacion(value);
   };
 
   const handleSemanaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,38 +80,71 @@ export default function Dietas() {
   };
 
   const handleAddSemana = () => {
-    if (newSemana.menu.length > 0 || newSemana.semana) { // Asegúrate de que haya algo en la semana
-      setNewDieta(prev => ({
+    if (newSemana.menu.length > 0) {
+      setNewDietaPayload(prev => ({
         ...prev,
-        semanas: [...prev.semanas, newSemana]
+        semanas: [...prev.semanas, { ...newSemana, menu: newSemana.menu.filter(item => item.trim() !== '') }]
       }));
-      setNewSemana({ semana: newSemana.semana + 1, menu: [] }); // Incrementa la semana para la siguiente
+      setNewSemana({ semana: newSemana.semana + 1, menu: [] });
     } else {
-        alert("Por favor, añade al menos un elemento al menú o asigna un número de semana.");
+        alert("Por favor, añade al menos un elemento al menú para la semana actual antes de añadirla.");
     }
   };
-  // *** FIN DE LAS FUNCIONES QUE ESTABAN FALTANDO ***
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("¡handleSubmit se está ejecutando!");
     try {
-      // **IMPORTANTE PARA DEPURACIÓN:** Confirma el payload final aquí
-      console.log("Payload enviado a createDieta:", newDieta);
+      if (!dietaNombre || !dietaDescripcion || !dietaFechaAsignacion) {
+          console.log("Fallo de validación: Nombre, descripción o fecha vacíos.");
+          alert('Por favor, completa el nombre, la descripción y la fecha de asignación de la dieta.');
+          return;
+      }
+      if (!newDietaPayload.paciente_id || !newDietaPayload.plan_id) {
+          console.log("Fallo de validación: Paciente o plan vacíos.");
+          alert('Por favor, selecciona un paciente y un plan.');
+          return;
+      }
+      if (newDietaPayload.semanas.length === 0) {
+          console.log("Fallo de validación: No hay semanas añadidas.");
+          alert('Por favor, añade al menos una semana a la dieta.');
+          return;
+      }
+      if (newDietaPayload.semanas.some(s => s.menu.length === 0 || s.menu.some(m => !m.trim()))) {
+          console.log("Fallo de validación: Algún menú de semana está vacío o contiene elementos vacíos.");
+          alert('Asegúrate de que todas las semanas tengan al menos un elemento de menú y que no estén vacíos.');
+          return;
+      }
 
-      const result = await createDieta(newDieta); // newDieta ahora es CreateDietaPayload
+      const payloadToSend: CreateDietaPayload = {
+          paciente_id: newDietaPayload.paciente_id,
+          plan_id: newDietaPayload.plan_id,
+          semanas: newDietaPayload.semanas,
+          nombre: dietaNombre,
+          descripcion: dietaDescripcion,
+          fechaAsignacion: dietaFechaAsignacion,
+      };
+
+      console.log("Payload FINAL enviado a createDieta:", payloadToSend);
+
+      const result = await createDieta(payloadToSend);
+      
       setDietas(prev => [...prev, result]);
       
-      // Resetear el formulario al estado inicial de CreateDietaPayload
-      setNewDieta({
+      setNewDietaPayload({
         paciente_id: user?.id || '',
         semanas: [],
         plan_id: ''
       });
+      setDietaNombre('');
+      setDietaDescripcion('');
+      setDietaFechaAsignacion(new Date().toISOString().split('T')[0]);
       setNewSemana({ semana: 1, menu: [] });
       setNewMenuItem('');
+      alert('Dieta creada y asignada con éxito.');
     } catch (error) {
-      alert('Error al agregar la dieta.');
-      console.error("Error al crear la dieta:", error); // Muestra el error en consola
+      alert('Error al agregar la dieta. Revisa la consola para más detalles.');
+      console.error("Error al crear la dieta:", error);
     }
   };
 
@@ -127,33 +167,22 @@ export default function Dietas() {
         <div className="card shadow-sm p-4">
           <h4 className="mb-3">Agregar nueva dieta</h4>
           <div className="row">
-            {/* Si el backend NO quiere nombre, descripcion, fechaAsignacion en el POST,
-                estos inputs NO DEBEN estar asociados a newDieta para el POST.
-                Los he comentado como se sugirió. Si tu UI necesita que el usuario ingrese
-                estos datos, necesitarás un estado separado para ellos
-                o un endpoint de API diferente.
-            */}
-            {/*
             <div className="col-md-6 mb-2">
               <input
                 className="form-control"
                 name="nombre"
-                placeholder="Nombre"
-                // 'newDieta' ya no tiene 'nombre', 'descripcion', 'fechaAsignacion'
-                // por lo que estos bindings (value={newDieta.nombre}) causarían errores de tipo
-                // y deben ser eliminados o movidos a un estado temporal si la UI los requiere.
-                value={newDieta.nombre || ''} // Esto ahora es inválido
-                onChange={handleInputChange}
+                placeholder="Nombre de la Dieta"
+                value={dietaNombre}
+                onChange={handleOtherInputChange}
                 required
               />
             </div>
-            */}
             <div className="col-md-6 mb-2">
               <select
                 className="form-select"
                 name="plan_id"
-                value={newDieta.plan_id}
-                onChange={handleInputChange}
+                value={newDietaPayload.plan_id}
+                onChange={handleDietaPayloadChange}
                 required
               >
                 <option value="">Selecciona un plan</option>
@@ -162,14 +191,13 @@ export default function Dietas() {
                 ))}
               </select>
             </div>
-            {/*
             <div className="col-md-12 mb-2">
               <textarea
                 className="form-control"
                 name="descripcion"
-                placeholder="Descripción"
-                value={newDieta.descripcion || ''} // Esto ahora es inválido
-                onChange={handleInputChange}
+                placeholder="Descripción de la Dieta"
+                value={dietaDescripcion}
+                onChange={handleOtherInputChange}
                 required
               />
             </div>
@@ -178,13 +206,40 @@ export default function Dietas() {
                 className="form-control"
                 name="fechaAsignacion"
                 type="date"
-                value={newDieta.fechaAsignacion || ''} // Esto ahora es inválido
-                onChange={handleInputChange}
+                placeholder="Fecha de Asignación"
+                value={dietaFechaAsignacion}
+                onChange={handleOtherInputChange}
                 required
               />
             </div>
-            */}
-            {/* Inputs para semanas y menuItem siguen siendo válidos */}
+
+            {/* Selector de Paciente - ¡CORREGIDO! */}
+            <div className="col-md-6 mb-2">
+                <label htmlFor="pacienteSelect" className="form-label">Paciente</label>
+                <select
+                  id="pacienteSelect"
+                  className="form-select"
+                  name="paciente_id"
+                  value={newDietaPayload.paciente_id}
+                  onChange={handleDietaPayloadChange}
+                  required
+                >
+                  <option value="">Selecciona un paciente</option>
+                  {pacientes.map(paciente => (
+                    // Usar paciente.id y paciente.nombre
+                    <option key={paciente.id} value={paciente.id}>
+                      {paciente.nombre || paciente.email} {/* Prioriza 'nombre', si no existe usa 'email' */}
+                    </option>
+                  ))}
+                  {/* Si el usuario logueado NO es un paciente que viene en la lista 'pacientes', puedes añadirlo.
+                      Pero si tu API ya devuelve al propio usuario en la lista de pacientes, esta línea podría duplicar.
+                  */}
+                  {/* {user?.id && !pacientes.some(p => p.id === user.id) && ( // Usar p.id para la comparación
+                      <option value={user.id}>{user.email} (Yo)</option>
+                  )} */}
+                </select>
+            </div>
+
             <div className="col-md-3 mb-2">
               <input
                 className="form-control"
@@ -206,16 +261,20 @@ export default function Dietas() {
             </div>
             <div className="col-md-12 mb-2">
               <ul className="list-group">
-                {/* Asegúrate de que newDieta.semanas siempre sea un array antes de mapear */}
-                {newDieta.semanas && newDieta.semanas.map((s, i) => (
+                {newSemana.menu.length > 0 && (
+                    <li className="list-group-item bg-light text-muted">
+                        Menú actual de Semana {newSemana.semana}: {newSemana.menu.join(', ')}
+                    </li>
+                )}
+                {newDietaPayload.semanas && newDietaPayload.semanas.map((s, i) => (
                   <li key={i} className="list-group-item">
-                    Semana {s.semana}: {s.menu.join(', ')}
+                    <strong>Semana {s.semana}:</strong> {s.menu.join(', ')}
                   </li>
                 ))}
               </ul>
             </div>
             <div className="col-md-12">
-              <button type="button" className="btn btn-info w-100" onClick={handleAddSemana}>Añadir Semana</button>
+              <button type="button" className="btn btn-info w-100" onClick={handleAddSemana}>Añadir Semana a la Dieta</button>
             </div>
           </div>
           <button className="btn btn-success mt-3 w-100" type="submit">
@@ -238,12 +297,13 @@ export default function Dietas() {
               <div key={dieta._id || dieta.id} className="col-md-4 mb-4">
                 <div className="card shadow h-100">
                   <div className="card-body">
-                    {/* Estos campos sí son válidos para mostrar si vienen de la API (GET) */}
-                    <h5 className="card-title">{dieta.nombre}</h5>
-                    <p className="card-text">{dieta.descripcion}</p>
-                    <p className="card-text"><strong>📆 Fecha:</strong> {dieta.fechaAsignacion}</p>
-                    <p className="card-text"><strong>🧾 Plan ID:</strong> {dieta.plan_id}</p>
-                    <p className="card-text"><strong>👤 Paciente ID:</strong> {dieta.paciente_id}</p>
+                    <h5 className="card-title">{dieta.nombre || 'Nombre no disponible'}</h5>
+                    <p className="card-text">{dieta.descripcion || 'Descripción no disponible'}</p>
+                    <p className="card-text">
+                        <strong>📆 Fecha:</strong> {dieta.fechaAsignacion ? new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                    </p>
+                    <p className="card-text"><strong>🧾 Plan ID:</strong> {dieta.plan_id || 'N/A'}</p>
+                    <p className="card-text"><strong>👤 Paciente ID:</strong> {dieta.paciente_id || 'N/A'}</p>
                     {dieta.semanas && dieta.semanas.length > 0 && (
                       <ul className="list-group mt-2">
                         {dieta.semanas.map((s, idx) => (
