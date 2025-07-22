@@ -26,36 +26,52 @@ export default function Register() {
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: 400 }}>
-      <h1 className="mb-4">Registro</h1>
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+      <div className="card shadow p-4 w-100" style={{ maxWidth: 400 }}>
+        <h2 className="text-center mb-4">Registro de Usuario</h2>
 
-      <input
-        className="form-control mb-2"
-        placeholder="Nombre completo"
-        value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
-        required
-      />
-      <input
-        className="form-control mb-2"
-        type="email"
-        placeholder="Correo electrónico"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <input
-        className="form-control mb-3"
-        type="password"
-        placeholder="Contraseña"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <button className="btn btn-success w-100" onClick={handleRegister}>
-        Registrarse
-      </button>
+        {error && <div className="alert alert-danger text-center">{error}</div>}
+
+        <div className="mb-3">
+          <label className="form-label">Nombre completo</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Juan Pérez"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Correo electrónico</label>
+          <input
+            type="email"
+            className="form-control"
+            placeholder="ejemplo@correo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="form-label">Contraseña</label>
+          <input
+            type="password"
+            className="form-control"
+            placeholder="********"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <button className="btn btn-success w-100" onClick={handleRegister}>
+          Registrarse
+        </button>
+      </div>
     </div>
   );
 }

@@ -29,33 +29,42 @@ export default function Login() {
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: 400 }}>
-      <h1 className="mb-4">Iniciar sesión</h1>
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+      <div className="card shadow p-4 w-100" style={{ maxWidth: 400 }}>
+        <h2 className="text-center mb-4">Iniciar sesión</h2>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          className="form-control mb-2"
-          type="email"
-          placeholder="Correo electrónico"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        {error && <div className="alert alert-danger text-center">{error}</div>}
 
-        <input
-          className="form-control mb-3"
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Correo electrónico</label>
+            <input
+              type="email"
+              className="form-control"
+              placeholder="ejemplo@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-        <button className="btn btn-primary w-100" type="submit" disabled={loading}>
-          {loading ? 'Cargando...' : 'Ingresar'}
-        </button>
-      </form>
+          <div className="mb-4">
+            <label className="form-label">Contraseña</label>
+            <input
+              type="password"
+              className="form-control"
+              placeholder="********"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+            {loading ? 'Cargando...' : 'Ingresar'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
