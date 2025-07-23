@@ -401,3 +401,112 @@ code {
   margin-bottom: 2.5rem;
 }
 
+.paciente-card {
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.paciente-card:hover, .paciente-card:focus {
+  box-shadow: 0 6px 32px 0 rgba(39,174,96,0.15);
+  transform: translateY(-4px) scale(1.025);
+  outline: none;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.7s ease-out forwards;
+  animation-delay: 0.1s; /* Slight delay for staggered effect */
+}
+
+/* Clases específicas para el componente de Pagos */
+.payment-card-fade-in {
+  animation: fadeIn 0.9s ease-out forwards;
+  animation-delay: 0.2s;
+}
+
+.payment-btn-animate {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out;
+}
+.payment-btn-animate:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 20px rgba(39,174,96,0.25);
+  background-color: #28a745; /* Slightly darker green on hover */
+}
+
+.pago-card-hover {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+.pago-card-hover:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 10px 25px rgba(39,174,96,0.15) !important;
+}
+
+.action-btn-hover {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.action-btn-hover:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Custom button gradient for "Registrar Nuevo Pago" */
+.custom-btn-gradient-green {
+  background: linear-gradient(90deg, #27ae60 0%, #38b000 100%);
+  border: none;
+  box-shadow: 0 4px 15px rgba(56,176,0,0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-btn-gradient-green:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(56,176,0,0.4);
+  background: linear-gradient(90deg, #38b000 0%, #27ae60 100%); /* Slight change on hover */
+}
+
+/* Ajustes generales de formularios */
+.form-control.rounded-pill,
+.form-select.rounded-pill {
+  border-color: #ced4da; /* Default border */
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.form-control.rounded-pill:focus,
+.form-select.rounded-pill:focus {
+  border-color: #27ae60; /* Green focus border */
+  box-shadow: 0 0 0 0.25rem rgba(39,174,96,0.25); /* Green shadow */
+}
+
+/* Modales */
+.modal-content {
+  border-radius: 1rem;
+  overflow: hidden; /* Ensures header corners are respected */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.modal-header.bg-success,
+.modal-header.bg-primary,
+.modal-header.bg-danger {
+  padding: 1.5rem 2rem;
+  font-size: 1.25rem;
+}
+
+.modal-body {
+  padding: 2rem;
+}
+
+.modal-footer {
+  padding: 1.5rem 2rem;
+  border-top: none;
+}

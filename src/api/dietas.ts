@@ -12,28 +12,24 @@ export interface Dieta {
   paciente_id: string;
   plan_id?: string;
   semanas: SemanaDieta[];
-  // Estos campos ahora son parte de la Dieta completa
   nombre?: string;
   descripcion?: string;
-  fechaAsignacion?: string; // Fecha en formato ISO string
-  __v?: number; // Versión del documento de Mongoose
-  createdAt?: string; // Si usas timestamps en Mongoose
-  updatedAt?: string; // Si usas timestamps en Mongoose
+  fechaAsignacion?: string;
+  __v?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// ¡ESTA INTERFAZ ES LA QUE DEBEMOS ACTUALIZAR!
-// Interfaz para el payload que SE ENVÍA al hacer POST a /dietas.
-// Ahora DEBE contener nombre, descripcion, fechaAsignacion porque tu backend los espera.
 export interface CreateDietaPayload {
   paciente_id: string;
-  plan_id?: string; // Ajusta si es opcional u obligatorio en tu API para el POST
+  plan_id?: string;
   semanas: SemanaDieta[];
-  // ¡AHORA SÍ INCLUIR 'nombre', 'descripcion', 'fechaAsignacion' aquí!
-  nombre: string; // Si es requerido en el backend
-  descripcion: string; // Si es requerido en el backend
-  fechaAsignacion: string; // Como string en formato ISO para enviar la fecha
+  nombre: string;
+  descripcion: string;
+  fechaAsignacion: string;
 }
 
+// Obtener todas las dietas
 export async function getAllDietas(): Promise<Dieta[]> {
   const res = await fetch(`${API}/dietas`, {
     method: 'GET',
@@ -48,10 +44,9 @@ export async function getAllDietas(): Promise<Dieta[]> {
   return res.json();
 }
 
+// Obtener las dietas de un usuario/paciente
 export async function getMyDietas(userId: string): Promise<Dieta[]> {
-  // Asegúrate de que tu backend tiene un endpoint para esto o usa un filtro
-  // Si tu backend tiene /dietas?paciente_id=<userId>, úsalo para eficiencia
-  const res = await fetch(`${API}/dietas?paciente_id=${userId}`, { // Ejemplo de endpoint con query param
+  const res = await fetch(`${API}/dietas?paciente_id=${userId}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -62,28 +57,56 @@ export async function getMyDietas(userId: string): Promise<Dieta[]> {
   }
 
   return res.json();
-  // return allDietas.filter(d => d.paciente_id === userId); // Esta línea sería solo si getAllDietas no soporta el filtro.
 }
 
-// Esta función 'createDieta' es para el POST a /dietas
+// Crear dieta (POST)
 export async function createDieta(dieta: CreateDietaPayload): Promise<Dieta> {
-  const payloadToSend = { ...dieta }; 
-
-  console.log("Enviando dieta a la API:", JSON.stringify(payloadToSend)); // Para depuración
-
   const res = await fetch(`${API}/dietas`, {
     method: 'POST',
     headers: {
       ...getAuthHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payloadToSend),
+    body: JSON.stringify(dieta),
   });
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({ message: 'Error desconocido del servidor o respuesta no JSON' }));
-    console.error("Error al crear dieta:", errorBody);
     throw new Error(errorBody.message || 'Error al crear dieta');
+  }
+
+  return res.json();
+}
+
+// Actualizar dieta (PUT /dietas/:id)
+export async function updateDieta(id: string, dieta: Partial<CreateDietaPayload>): Promise<Dieta> {
+  const res = await fetch(`${API}/dietas/${id}`, {
+    method: 'PUT',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(dieta),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido al actualizar dieta.' }));
+    throw new Error(errorBody.message || 'Error al actualizar dieta');
+  }
+
+  return res.json();
+}
+
+// Eliminar dieta (DELETE /dietas/:id)
+export async function deleteDieta(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${API}/dietas/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido al eliminar dieta.' }));
+    throw new Error(errorBody.message || 'Error al eliminar dieta');
   }
 
   return res.json();

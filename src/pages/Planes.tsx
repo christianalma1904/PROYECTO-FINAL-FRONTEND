@@ -3,7 +3,7 @@ import { getPlanes, Plan, createPlan, deletePlan, updatePlan } from '../api/plan
 import { useAuth } from '../context/AuthContext';
 
 export default function Planes() {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,6 +11,9 @@ export default function Planes() {
 
   const [nuevoPlan, setNuevoPlan] = useState({ nombre: '', descripcion: '', precio: '' });
   const [editandoId, setEditandoId] = useState<number | null>(null);
+
+  // Detectar rol
+  const userRole = user?.rol || 'paciente';
 
   const fetchPlanes = async () => {
     setLoading(true);
@@ -92,45 +95,47 @@ export default function Planes() {
         Accede a planes adaptados a tus necesidades nutricionales, diseñados por profesionales.
       </p>
 
-      {/* Formulario */}
-      <form onSubmit={handleSubmit} className="mb-4">
-        <div className="card shadow-sm p-4" style={{ border: "1.5px solid #d1fadf", background: "#fff" }}>
-          <h4 className="mb-3 text-success">{editandoId ? 'Editar plan' : 'Agregar nuevo plan'}</h4>
-          <div className="row">
-            <div className="col-md-4 mb-2">
-              <input
-                className="form-control"
-                placeholder="Nombre"
-                value={nuevoPlan.nombre}
-                onChange={(e) => setNuevoPlan({ ...nuevoPlan, nombre: e.target.value })}
-                required
-              />
+      {/* Formulario SOLO PARA ADMIN */}
+      {userRole === 'admin' && (
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div className="card shadow-sm p-4" style={{ border: "1.5px solid #d1fadf", background: "#fff" }}>
+            <h4 className="mb-3 text-success">{editandoId ? 'Editar plan' : 'Agregar nuevo plan'}</h4>
+            <div className="row">
+              <div className="col-md-4 mb-2">
+                <input
+                  className="form-control"
+                  placeholder="Nombre"
+                  value={nuevoPlan.nombre}
+                  onChange={(e) => setNuevoPlan({ ...nuevoPlan, nombre: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="col-md-4 mb-2">
+                <input
+                  className="form-control"
+                  type="number"
+                  placeholder="Precio"
+                  value={nuevoPlan.precio}
+                  onChange={(e) => setNuevoPlan({ ...nuevoPlan, precio: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="col-md-12 mb-2">
+                <textarea
+                  className="form-control"
+                  placeholder="Descripción"
+                  value={nuevoPlan.descripcion}
+                  onChange={(e) => setNuevoPlan({ ...nuevoPlan, descripcion: e.target.value })}
+                  required
+                />
+              </div>
             </div>
-            <div className="col-md-4 mb-2">
-              <input
-                className="form-control"
-                type="number"
-                placeholder="Precio"
-                value={nuevoPlan.precio}
-                onChange={(e) => setNuevoPlan({ ...nuevoPlan, precio: e.target.value })}
-                required
-              />
-            </div>
-            <div className="col-md-12 mb-2">
-              <textarea
-                className="form-control"
-                placeholder="Descripción"
-                value={nuevoPlan.descripcion}
-                onChange={(e) => setNuevoPlan({ ...nuevoPlan, descripcion: e.target.value })}
-                required
-              />
-            </div>
+            <button className="btn btn-success mt-3 w-100 rounded-pill" type="submit" style={{ background: 'linear-gradient(90deg, #4CAF50 60%, #27ae60 100%)', border: 'none' }}>
+              {editandoId ? 'Guardar cambios' : 'Agregar Plan'}
+            </button>
           </div>
-          <button className="btn btn-success mt-3 w-100 rounded-pill" type="submit" style={{ background: 'linear-gradient(90deg, #4CAF50 60%, #27ae60 100%)', border: 'none' }}>
-            {editandoId ? 'Guardar cambios' : 'Agregar Plan'}
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
 
       {/* Planes Cards */}
       {loading ? (
@@ -179,12 +184,17 @@ export default function Planes() {
                         <p className="card-text">{plan.descripcion}</p>
                       </div>
                       <div className="d-flex gap-2 mt-3">
-                        <button className="btn btn-outline-primary w-100" onClick={() => handleEditar(plan)}>
-                          Editar
-                        </button>
-                        <button className="btn btn-outline-danger w-100" onClick={() => handleEliminar(plan.id)}>
-                          Eliminar
-                        </button>
+                        {/* SOLO ADMIN puede editar/eliminar */}
+                        {userRole === 'admin' && (
+                          <>
+                            <button className="btn btn-outline-primary w-100" onClick={(e) => { e.stopPropagation(); handleEditar(plan); }}>
+                              Editar
+                            </button>
+                            <button className="btn btn-outline-danger w-100" onClick={(e) => { e.stopPropagation(); handleEliminar(plan.id); }}>
+                              Eliminar
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn btn-outline-success w-100"
                           onClick={e => { e.stopPropagation(); setFlippedId(null); }}

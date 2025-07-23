@@ -1,35 +1,115 @@
-// src/pages/Dietas.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useReducer, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Dieta, getAllDietas, createDieta, SemanaDieta, CreateDietaPayload } from '../api/dietas';
+import {
+  Dieta, getAllDietas, createDieta, updateDieta, deleteDieta,
+  SemanaDieta, CreateDietaPayload
+} from '../api/dietas';
 import { getPlanes, Plan } from '../api/planes';
 import { getPacientes, Paciente } from '../api/pacientes';
 
+// Interfaces para el estado del formulario
+interface DietaFormState {
+  nombre: string;
+  descripcion: string;
+  fechaAsignacion: string;
+  paciente_id: string;
+  plan_id: string;
+  semanas: SemanaDieta[];
+  currentSemanaNum: number;
+  currentSemanaMenu: string[];
+  newMenuItem: string;
+}
+
+type DietaFormAction =
+  | { type: 'RESET_FORM' }
+  | { type: 'SET_FIELD'; field: keyof DietaFormState; value: string }
+  | { type: 'SET_CURRENT_SEMANA_NUM'; value: number }
+  | { type: 'ADD_MENU_ITEM'; item: string }
+  | { type: 'ADD_SEMANA' }
+  | { type: 'LOAD_DIETA_FOR_EDIT'; dieta: Dieta };
+
+const dietaFormReducer = (state: DietaFormState, action: DietaFormAction): DietaFormState => {
+  switch (action.type) {
+    case 'SET_FIELD':
+      if (Object.prototype.hasOwnProperty.call(state, action.field) && typeof state[action.field] === 'string') {
+        return { ...state, [action.field]: action.value } as DietaFormState;
+      }
+      return state;
+    case 'SET_CURRENT_SEMANA_NUM':
+      return { ...state, currentSemanaNum: action.value };
+    case 'ADD_MENU_ITEM':
+      return { ...state, currentSemanaMenu: [...state.currentSemanaMenu, action.item], newMenuItem: '' };
+    case 'ADD_SEMANA':
+      const newSemana: SemanaDieta = {
+        semana: state.currentSemanaNum,
+        menu: state.currentSemanaMenu.filter(item => item.trim() !== '')
+      };
+      return {
+        ...state,
+        semanas: [...state.semanas, newSemana],
+        currentSemanaNum: state.currentSemanaNum + 1,
+        currentSemanaMenu: [],
+      };
+    case 'LOAD_DIETA_FOR_EDIT':
+      return {
+        ...state,
+        nombre: action.dieta.nombre || '',
+        descripcion: action.dieta.descripcion || '',
+        fechaAsignacion: action.dieta.fechaAsignacion ? action.dieta.fechaAsignacion.split('T')[0] : new Date().toISOString().split('T')[0],
+        paciente_id: action.dieta.paciente_id || '',
+        plan_id: action.dieta.plan_id || '',
+        semanas: action.dieta.semanas || [],
+        currentSemanaNum: (action.dieta.semanas?.length ? Math.max(...action.dieta.semanas.map(s => s.semana)) + 1 : 1),
+        currentSemanaMenu: [],
+        newMenuItem: ''
+      };
+    case 'RESET_FORM':
+      return {
+        nombre: '',
+        descripcion: '',
+        fechaAsignacion: new Date().toISOString().split('T')[0],
+        paciente_id: '',
+        plan_id: '',
+        semanas: [],
+        currentSemanaNum: 1,
+        currentSemanaMenu: [],
+        newMenuItem: ''
+      };
+    default:
+      return state;
+  }
+};
+
 export default function Dietas() {
   const { token, isAuthenticated, user } = useAuth();
+  const isAdmin = user?.rol === 'admin';
+
   const [dietas, setDietas] = useState<Dieta[]>([]);
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
 
-  // Form states
-  const [newDietaPayload, setNewDietaPayload] = useState<Omit<CreateDietaPayload, 'nombre' | 'descripcion' | 'fechaAsignacion'>>({
+  const initialFormState: DietaFormState = {
+    nombre: '',
+    descripcion: '',
+    fechaAsignacion: new Date().toISOString().split('T')[0],
     paciente_id: user?.id || '',
+    plan_id: '',
     semanas: [],
-    plan_id: ''
-  });
-  const [dietaNombre, setDietaNombre] = useState<string>('');
-  const [dietaDescripcion, setDietaDescripcion] = useState<string>('');
-  const [dietaFechaAsignacion, setDietaFechaAsignacion] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [newSemana, setNewSemana] = useState<SemanaDieta>({ semana: 1, menu: [] });
-  const [newMenuItem, setNewMenuItem] = useState<string>('');
+    currentSemanaNum: 1,
+    currentSemanaMenu: [],
+    newMenuItem: '',
+  };
 
+  const [formState, dispatch] = useReducer(dietaFormReducer, initialFormState);
+
+  // Efecto para cargar datos iniciales
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const [dietasData, planesData, pacientesData] = await Promise.all([
           getAllDietas(),
@@ -40,140 +120,164 @@ export default function Dietas() {
         setPlanes(planesData);
         setPacientes(pacientesData);
       } catch (err: any) {
-        setError('Error al cargar dietas, planes o pacientes.');
+        setError('Error al cargar dietas, planes o pacientes. Intenta de nuevo más tarde.');
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    if (isAuthenticated && token) fetchData();
-    if (user?.id && newDietaPayload.paciente_id === '') {
-      setNewDietaPayload(prev => ({ ...prev, paciente_id: user.id }));
+    if (isAuthenticated && token) {
+      fetchData();
     }
-  }, [isAuthenticated, token, user?.id, newDietaPayload.paciente_id]);
+  }, [isAuthenticated, token]);
 
-  // --- HANDLERS ---
-  const handleDietaPayloadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  // Sincronizar paciente_id con el usuario loggeado si es el primero en cargar
+  useEffect(() => {
+    if (user?.id && formState.paciente_id === '') {
+      dispatch({ type: 'SET_FIELD', field: 'paciente_id', value: user.id });
+    }
+  }, [user?.id, formState.paciente_id]);
+
+  // HANDLERS FORM
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewDietaPayload(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleOtherInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    if (name === 'nombre') setDietaNombre(value);
-    else if (name === 'descripcion') setDietaDescripcion(value);
-    else if (name === 'fechaAsignacion') setDietaFechaAsignacion(value);
-  };
-
-  const handleSemanaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewSemana(prev => ({ ...prev, semana: parseInt(e.target.value) }));
-  };
-
-  const handleMenuItemAdd = () => {
-    if (newMenuItem.trim()) {
-      setNewSemana(prev => ({ ...prev, menu: [...prev.menu, newMenuItem.trim()] }));
-      setNewMenuItem('');
+    if (name in formState && typeof formState[name as keyof DietaFormState] === 'string') {
+      dispatch({ type: 'SET_FIELD', field: name as keyof DietaFormState, value });
     }
-  };
+  }, [formState]);
 
-  const handleAddSemana = () => {
-    if (newSemana.menu.length > 0) {
-      setNewDietaPayload(prev => ({
-        ...prev,
-        semanas: [
-          ...prev.semanas,
-          { ...newSemana, menu: newSemana.menu.filter(item => item.trim() !== '') }
-        ]
-      }));
-      setNewSemana({ semana: newSemana.semana + 1, menu: [] });
+  const handleSemanaNumChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'SET_CURRENT_SEMANA_NUM', value: parseInt(e.target.value) || 1 });
+  }, []);
+
+  const handleNewMenuItemChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'SET_FIELD', field: 'newMenuItem', value: e.target.value });
+  }, []);
+
+  const handleMenuItemAdd = useCallback(() => {
+    if (formState.newMenuItem.trim()) {
+      dispatch({ type: 'ADD_MENU_ITEM', item: formState.newMenuItem.trim() });
+    }
+  }, [formState.newMenuItem]);
+
+  const handleAddSemana = useCallback(() => {
+    if (formState.currentSemanaMenu.length > 0) {
+      dispatch({ type: 'ADD_SEMANA' });
     } else {
-      alert("Por favor, añade al menos un elemento al menú para la semana actual.");
+      alert("Por favor, añade al menos un elemento al menú para la semana actual antes de añadir la semana.");
     }
-  };
+  }, [formState.currentSemanaMenu]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // HANDLERS DIETA
+  const handleEditarDieta = useCallback((dieta: Dieta) => {
+    setEditandoId(dieta._id || dieta.id || null);
+    dispatch({ type: 'LOAD_DIETA_FOR_EDIT', dieta });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleEliminarDieta = useCallback(async (id: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar esta dieta? Esta acción es irreversible.')) return;
     try {
-      if (!dietaNombre || !dietaDescripcion || !dietaFechaAsignacion) {
-        alert('Completa nombre, descripción y fecha.');
-        return;
-      }
-      if (!newDietaPayload.paciente_id || !newDietaPayload.plan_id) {
-        alert('Selecciona paciente y plan.');
-        return;
-      }
-      if (newDietaPayload.semanas.length === 0) {
-        alert('Añade al menos una semana.');
-        return;
-      }
-      if (newDietaPayload.semanas.some(s => s.menu.length === 0 || s.menu.some(m => !m.trim()))) {
-        alert('Verifica que todos los menús de semana tengan elementos.');
-        return;
-      }
-
-      const payloadToSend: CreateDietaPayload = {
-        paciente_id: newDietaPayload.paciente_id,
-        plan_id: newDietaPayload.plan_id,
-        semanas: newDietaPayload.semanas,
-        nombre: dietaNombre,
-        descripcion: dietaDescripcion,
-        fechaAsignacion: dietaFechaAsignacion,
-      };
-
-      const result = await createDieta(payloadToSend);
-      setDietas(prev => [...prev, result]);
-      setNewDietaPayload({ paciente_id: user?.id || '', semanas: [], plan_id: '' });
-      setDietaNombre('');
-      setDietaDescripcion('');
-      setDietaFechaAsignacion(new Date().toISOString().split('T')[0]);
-      setNewSemana({ semana: 1, menu: [] });
-      setNewMenuItem('');
-      alert('Dieta creada con éxito.');
-    } catch (error) {
-      alert('Error al agregar la dieta.');
-      // Opcional: console.error(error);
+      await deleteDieta(id);
+      setDietas(prev => prev.filter(d => (d._id || d.id) !== id));
+      alert('Dieta eliminada con éxito.');
+    } catch {
+      alert('Error al eliminar la dieta. Por favor, inténtalo de nuevo.');
     }
-  };
+  }, []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { nombre, descripcion, fechaAsignacion, paciente_id, plan_id, semanas } = formState;
+
+    if (!nombre.trim() || !descripcion.trim() || !fechaAsignacion) {
+      alert('Por favor, completa el nombre, la descripción y la fecha de asignación de la dieta.');
+      return;
+    }
+    if (!paciente_id || !plan_id) {
+      alert('Por favor, selecciona un paciente y un plan para la dieta.');
+      return;
+    }
+    if (semanas.length === 0) {
+      alert('Debes añadir al menos una semana con su menú a la dieta.');
+      return;
+    }
+    if (semanas.some(s => s.menu.length === 0 || s.menu.some(m => !m.trim()))) {
+      alert('Verifica que todas las semanas añadidas tengan al menos un elemento de menú válido.');
+      return;
+    }
+
+    const payloadToSend: CreateDietaPayload = {
+      nombre,
+      descripcion,
+      fechaAsignacion,
+      paciente_id,
+      plan_id,
+      semanas: semanas.map(s => ({ ...s, menu: s.menu.map(item => item.trim()) })),
+    };
+
+    try {
+      if (editandoId) {
+        const updatedDieta = await updateDieta(editandoId, payloadToSend);
+        setDietas(prev =>
+          prev.map(d => (d._id === editandoId || d.id === editandoId ? updatedDieta : d))
+        );
+        setEditandoId(null);
+        alert('Dieta actualizada con éxito.');
+      } else {
+        const newDieta = await createDieta(payloadToSend);
+        setDietas(prev => [...prev, newDieta]);
+        alert('Dieta creada con éxito.');
+      }
+      dispatch({ type: 'RESET_FORM' });
+    } catch {
+      alert('Hubo un error al guardar la dieta. Por favor, inténtalo de nuevo.');
+    }
+  }, [formState, editandoId]);
 
   if (!isAuthenticated || !token) {
     return (
-      <div className="container mt-5 alert alert-warning">
-        Por favor inicia sesión para visualizar las dietas disponibles.
+      <div className="container mt-5 alert alert-warning text-center">
+        Por favor, <b>inicia sesión</b> para visualizar y gestionar las dietas disponibles.
       </div>
     );
   }
 
   return (
     <div className="container mt-5 mb-5">
-      <h1 className="mb-4 text-center text-success fw-bold">Dietas Asignadas 🥗</h1>
+      <h1 className="mb-4 text-center text-success fw-bold">Gestión de Dietas 🥗</h1>
       <p className="text-muted text-center mb-4">
-        Registra y accede a tus dietas semanales personalizadas.
+        Administra las dietas personalizadas para tus pacientes, asignando planes y detallando los menús semanales.
       </p>
 
-      {/* FORMULARIO NUEVA DIETA */}
-      <form onSubmit={handleSubmit} className="mb-4">
-        <div className="card shadow-sm p-4 border-0">
-          <h4 className="mb-3 text-success fw-semibold">Agregar nueva dieta</h4>
-          <div className="row g-2">
+      {/* SOLO ADMIN: FORMULARIO DE DIETA */}
+      {isAdmin && (
+        <form onSubmit={handleSubmit} className="mb-5 p-4 shadow-sm rounded-3 bg-light">
+          <h4 className="mb-4 text-success fw-semibold border-bottom pb-2">
+            {editandoId ? "Editar Dieta Existente" : "Crear Nueva Dieta"}
+          </h4>
+          <div className="row g-3">
             <div className="col-md-6">
               <input
+                id="nombreDieta"
                 className="form-control"
                 name="nombre"
-                placeholder="Nombre de la Dieta"
-                value={dietaNombre}
-                onChange={handleOtherInputChange}
+                placeholder="Nombre de la Dieta (ej. Dieta Keto)"
+                value={formState.nombre}
+                onChange={handleInputChange}
                 required
               />
             </div>
             <div className="col-md-6">
               <select
+                id="planId"
                 className="form-select"
                 name="plan_id"
-                value={newDietaPayload.plan_id}
-                onChange={handleDietaPayloadChange}
+                value={formState.plan_id}
+                onChange={handleInputChange}
                 required
               >
-                <option value="">Selecciona un plan</option>
+                <option value="">Selecciona un plan nutricional</option>
                 {planes.map(plan => (
                   <option key={plan.id} value={plan.id}>{plan.nombre}</option>
                 ))}
@@ -181,33 +285,34 @@ export default function Dietas() {
             </div>
             <div className="col-md-12">
               <textarea
+                id="descripcionDieta"
                 className="form-control"
                 name="descripcion"
-                placeholder="Descripción de la Dieta"
-                value={dietaDescripcion}
-                onChange={handleOtherInputChange}
+                placeholder="Describe brevemente esta dieta"
+                value={formState.descripcion}
+                onChange={handleInputChange}
                 required
                 rows={2}
               />
             </div>
             <div className="col-md-6">
               <input
+                id="fechaAsignacion"
                 className="form-control"
                 name="fechaAsignacion"
                 type="date"
-                placeholder="Fecha de Asignación"
-                value={dietaFechaAsignacion}
-                onChange={handleOtherInputChange}
+                value={formState.fechaAsignacion}
+                onChange={handleInputChange}
                 required
               />
             </div>
-            {/* Selector de Paciente */}
             <div className="col-md-6">
               <select
+                id="pacienteId"
                 className="form-select"
                 name="paciente_id"
-                value={newDietaPayload.paciente_id}
-                onChange={handleDietaPayloadChange}
+                value={formState.paciente_id}
+                onChange={handleInputChange}
                 required
               >
                 <option value="">Selecciona un paciente</option>
@@ -218,62 +323,108 @@ export default function Dietas() {
                 ))}
               </select>
             </div>
-            {/* Semana y menú */}
-            <div className="col-md-3 mb-2">
-              <input
-                className="form-control"
-                name="semana"
-                type="number"
-                value={newSemana.semana}
-                onChange={handleSemanaChange}
-                min={1}
-              />
+            {/* Menú semanal */}
+            <div className="col-12 mt-4">
+              <h5 className="mb-3 text-secondary">Añadir Menú Semanal</h5>
+              <div className="row g-2 align-items-end">
+                <div className="col-md-3">
+                  <input
+                    id="semanaNum"
+                    className="form-control"
+                    name="semana"
+                    type="number"
+                    value={formState.currentSemanaNum}
+                    onChange={handleSemanaNumChange}
+                    min={1}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <div className="input-group">
+                    <input
+                      id="menuItem"
+                      className="form-control"
+                      placeholder="Ej. Pollo a la plancha, Arroz, Ensalada"
+                      value={formState.newMenuItem}
+                      onChange={handleNewMenuItemChange}
+                      onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMenuItemAdd(); } }}
+                    />
+                    <button type="button" className="btn btn-outline-secondary" onClick={handleMenuItemAdd}>
+                      Añadir Item
+                    </button>
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <button type="button" className="btn btn-info w-100" onClick={handleAddSemana}>
+                    Guardar Semana
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="col-md-6 mb-2 d-flex">
-              <input
-                className="form-control me-2"
-                placeholder="Elemento menú"
-                value={newMenuItem}
-                onChange={(e) => setNewMenuItem(e.target.value)}
-              />
-              <button type="button" className="btn btn-outline-secondary" onClick={handleMenuItemAdd}>+</button>
+            <div className="col-md-12 mt-3">
+              <h6 className="mb-2 text-primary">Menú de la Semana Actual:</h6>
+              {formState.currentSemanaMenu.length > 0 ? (
+                <ul className="list-group list-group-flush">
+                  {formState.currentSemanaMenu.map((item, index) => (
+                    <li key={index} className="list-group-item py-1">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted fst-italic">Aún no has añadido elementos al menú de esta semana.</p>
+              )}
+              <h6 className="mt-3 mb-2 text-success">Semanas Añadidas a la Dieta:</h6>
+              {formState.semanas.length > 0 ? (
+                <ul className="list-group">
+                  {formState.semanas.map((s, i) => (
+                    <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
+                      <strong>Semana {s.semana}:</strong> {s.menu.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted fst-italic">No hay semanas añadidas a esta dieta aún.</p>
+              )}
             </div>
-            <div className="col-md-3 mb-2">
-              <button type="button" className="btn btn-info w-100" onClick={handleAddSemana}>
-                Añadir Semana
+            <div className="col-12 mt-4">
+              <button className="btn btn-success w-100 py-2" type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Guardando...
+                  </>
+                ) : editandoId ? "Actualizar Dieta" : "Crear Dieta"}
               </button>
-            </div>
-            <div className="col-md-12">
-              <ul className="list-group">
-                {newSemana.menu.length > 0 && (
-                  <li className="list-group-item bg-light text-muted">
-                    Menú actual Semana {newSemana.semana}: {newSemana.menu.join(', ')}
-                  </li>
-                )}
-                {newDietaPayload.semanas.map((s, i) => (
-                  <li key={i} className="list-group-item">
-                    <strong>Semana {s.semana}:</strong> {s.menu.join(', ')}
-                  </li>
-                ))}
-              </ul>
+              {editandoId && (
+                <button
+                  type="button"
+                  className="btn btn-secondary w-100 mt-2"
+                  onClick={() => {
+                    setEditandoId(null);
+                    dispatch({ type: 'RESET_FORM' });
+                  }}
+                >
+                  Cancelar Edición
+                </button>
+              )}
             </div>
           </div>
-          <button className="btn btn-success mt-3 w-100" type="submit">
-            Crear Dieta
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
 
       {/* LISTA DE DIETAS */}
+      <hr className="my-5" />
+      <h2 className="mb-4 text-center text-primary fw-bold">Listado de Dietas Existentes</h2>
+
       {loading ? (
-        <div className="text-center">
-          <div className="spinner-border text-success" role="status" />
-          <p className="mt-2">Cargando dietas...</p>
+        <div className="text-center py-5">
+          <div className="spinner-border text-success" role="status" style={{ width: '3rem', height: '3rem' }} />
+          <p className="mt-3 fs-5 text-success">Cargando dietas...</p>
         </div>
       ) : error ? (
-        <div className="alert alert-danger">{error}</div>
+        <div className="alert alert-danger text-center p-3">{error}</div>
       ) : (
-        <div className="row">
+        <div className="row g-4">
           {dietas.length > 0 ? (
             dietas
               .slice()
@@ -283,53 +434,72 @@ export default function Dietas() {
                   : 0
               )
               .map((dieta) => (
-                <div key={dieta._id || dieta.id} className="col-12 col-md-6 col-lg-4 mb-4">
-                  <div className="card h-100 shadow border-0 dieta-card">
+                <div key={dieta._id || dieta.id} className="col-12 col-md-6 col-lg-4">
+                  <div className="card h-100 shadow-sm border-0 animate__animated animate__fadeInUp">
                     <div className="card-body d-flex flex-column">
                       <h5 className="card-title text-success fw-bold mb-2">
-                        {dieta.nombre || 'Nombre no disponible'}
+                        {dieta.nombre || 'Dieta sin Nombre'}
                       </h5>
-                      <p className="card-text mb-1">{dieta.descripcion || 'Descripción no disponible'}</p>
-                      <span className="badge rounded-pill bg-success-subtle text-success mb-2">
-                        {dieta.fechaAsignacion
-                          ? "Asignada: " +
-                            new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', {
+                      <p className="card-text text-muted mb-2 flex-grow-1">{dieta.descripcion || 'Sin descripción detallada.'}</p>
+                      <hr className="my-2" />
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <span className="badge bg-success-subtle text-success">
+                          📅 Asignada: {dieta.fechaAsignacion
+                            ? new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', {
                               year: 'numeric', month: 'long', day: 'numeric'
                             })
-                          : 'No asignada'}
-                      </span>
-                      <div className="mb-2">
-                        <span className="badge bg-light text-dark me-1">
-                          {/* CONVERTING TO NUMBER HERE */}
-                          🧾 Plan: {planes.find(p => p.id === Number(dieta.plan_id))?.nombre || dieta.plan_id}
+                            : 'Fecha no disponible'}
                         </span>
-                        <span className="badge bg-light text-dark">
-                          {/* CONVERTING TO NUMBER HERE */}
-                          👤 Paciente: {pacientes.find(p => p.id === Number(dieta.paciente_id))?.nombre || dieta.paciente_id}
+                        <span className="badge bg-info-subtle text-info">
+                          🧾 Plan: {planes.find(p => p.id === Number(dieta.plan_id))?.nombre || `ID: ${dieta.plan_id}`}
+                        </span>
+                        <span className="badge bg-primary-subtle text-primary">
+                          👤 Paciente: {pacientes.find(p => p.id === Number(dieta.paciente_id))?.nombre || `ID: ${dieta.paciente_id}`}
                         </span>
                       </div>
-                      <div>
-                        {dieta.semanas && dieta.semanas.length > 0 && (
-                          <details className="mb-0">
-                            <summary className="fw-semibold text-success" style={{ cursor: "pointer" }}>
-                              Menú Semanal <span style={{ fontSize: 12 }}>▼</span>
-                            </summary>
-                            <ul className="list-group mt-2">
-                              {dieta.semanas.map((s, idx) => (
-                                <li key={idx} className="list-group-item py-1">
-                                  <strong>Semana {s.semana}:</strong> {s.menu.join(', ')}
+                      {dieta.semanas && dieta.semanas.length > 0 && (
+                        <details className="mb-3">
+                          <summary className="fw-semibold text-primary" style={{ cursor: "pointer" }}>
+                            Ver Menú Semanal ({dieta.semanas.length} semanas) <span className="ms-1" style={{ fontSize: '0.8em' }}>▼</span>
+                          </summary>
+                          <ul className="list-group list-group-flush mt-2 border rounded-1">
+                            {dieta.semanas
+                              .slice()
+                              .sort((a, b) => a.semana - b.semana)
+                              .map((s, idx) => (
+                                <li key={idx} className="list-group-item py-2">
+                                  <strong className="text-dark">Semana {s.semana}:</strong> <br />
+                                  <small className="text-secondary">{s.menu.join(', ')}</small>
                                 </li>
                               ))}
-                            </ul>
-                          </details>
-                        )}
-                      </div>
+                          </ul>
+                        </details>
+                      )}
+                      {/* BOTONES DE ACCIÓN SOLO PARA ADMIN */}
+                      {isAdmin && (
+                        <div className="d-flex gap-2 mt-auto pt-2 border-top">
+                          <button
+                            className="btn btn-outline-primary btn-sm flex-fill"
+                            onClick={() => handleEditarDieta(dieta)}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            className="btn btn-outline-danger btn-sm flex-fill"
+                            onClick={() => handleEliminarDieta(dieta._id || dieta.id || '')}
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))
           ) : (
-            <p className="col-12 text-center">No hay dietas disponibles actualmente.</p>
+            <p className="col-12 text-center alert alert-info py-4">
+              ✨ ¡No hay dietas registradas aún! {isAdmin && 'Usa el formulario de arriba para añadir la primera.'}
+            </p>
           )}
         </div>
       )}

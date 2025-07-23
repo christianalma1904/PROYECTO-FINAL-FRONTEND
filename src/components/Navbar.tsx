@@ -6,11 +6,14 @@ import UserMenu from './UserMenu';
 import { Navbar, Nav, Container } from 'react-bootstrap';
 
 export default function AppNavbar() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   // Helper para marcar activo
   const isActive = (path: string) => location.pathname.startsWith(path);
+
+  // Obtener el rol del usuario autenticado
+  const userRole = user?.rol || 'paciente'; // Por defecto 'paciente' si no hay rol
 
   return (
     <Navbar
@@ -35,46 +38,44 @@ export default function AppNavbar() {
           <Nav className="align-items-center gap-1">
             {isAuthenticated ? (
               <>
-                <Nav.Link as={Link}
-                  to="/dashboard"
-                  className={isActive('/dashboard') ? 'nav-active' : ''}
-                >Dashboard</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/planes"
-                  className={isActive('/planes') ? 'nav-active' : ''}
-                >Planes</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/dietas"
-                  className={isActive('/dietas') ? 'nav-active' : ''}
-                >Dietas</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/seguimiento"
-                  className={isActive('/seguimiento') ? 'nav-active' : ''}
-                >Seguimiento</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/pacientes"
-                  className={isActive('/pacientes') ? 'nav-active' : ''}
-                >Pacientes</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/nutricionistas"
-                  className={isActive('/nutricionistas') ? 'nav-active' : ''}
-                >Nutricionistas</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/pagos"
-                  className={isActive('/pagos') ? 'nav-active' : ''}
-                >Pagos</Nav.Link>
+                {/* Opciones para ambos */}
+                <Nav.Link as={Link} to="/dashboard" className={isActive('/dashboard') ? 'nav-active' : ''}>
+                  Dashboard
+                </Nav.Link>
+                <Nav.Link as={Link} to="/planes" className={isActive('/planes') ? 'nav-active' : ''}>
+                  Planes
+                </Nav.Link>
+                <Nav.Link as={Link} to="/dietas" className={isActive('/dietas') ? 'nav-active' : ''}>
+                  Dietas
+                </Nav.Link>
+                <Nav.Link as={Link} to="/pagos" className={isActive('/pagos') ? 'nav-active' : ''}>
+                  Pagos
+                </Nav.Link>
+                {/* Opciones solo para admin */}
+                {userRole === 'admin' && (
+                  <>
+                    <Nav.Link as={Link} to="/pacientes" className={isActive('/pacientes') ? 'nav-active' : ''}>
+                      Pacientes
+                    </Nav.Link>
+                    <Nav.Link as={Link} to="/nutricionistas" className={isActive('/nutricionistas') ? 'nav-active' : ''}>
+                      Nutricionistas
+                    </Nav.Link>
+                    {/* Si tienes seguimiento exclusivo de admin, déjalo aquí */}
+                    {/* <Nav.Link as={Link} to="/seguimiento" className={isActive('/seguimiento') ? 'nav-active' : ''}>
+                      Seguimiento
+                    </Nav.Link> */}
+                  </>
+                )}
                 <UserMenu />
               </>
             ) : (
               <>
-                <Nav.Link as={Link}
-                  to="/login"
-                  className={isActive('/login') ? 'nav-active' : ''}
-                >Iniciar sesión</Nav.Link>
-                <Nav.Link as={Link}
-                  to="/register"
-                  className={isActive('/register') ? 'nav-active' : ''}
-                >Registrarse</Nav.Link>
+                <Nav.Link as={Link} to="/login" className={isActive('/login') ? 'nav-active' : ''}>
+                  Iniciar sesión
+                </Nav.Link>
+                <Nav.Link as={Link} to="/register" className={isActive('/register') ? 'nav-active' : ''}>
+                  Registrarse
+                </Nav.Link>
               </>
             )}
           </Nav>
