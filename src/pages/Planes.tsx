@@ -7,6 +7,7 @@ export default function Planes() {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flippedId, setFlippedId] = useState<number | null>(null);
 
   const [nuevoPlan, setNuevoPlan] = useState({ nombre: '', descripcion: '', precio: '' });
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -50,19 +51,18 @@ export default function Planes() {
       await fetchPlanes();
     } catch (error) {
       alert('Error al guardar el plan.');
-      console.error('Error saving plan:', error); // Agregué un console.error para mejor depuración
+      console.error('Error saving plan:', error);
     }
   };
 
   const handleEliminar = async (id: number) => {
-    // CORRECCIÓN AQUÍ: Se cambió 'confirm' por 'window.confirm'
     if (window.confirm('¿Estás seguro de eliminar este plan?')) {
       try {
         await deletePlan(id);
         await fetchPlanes();
       } catch (err) {
         alert('Error al eliminar el plan.');
-        console.error('Error deleting plan:', err); // Agregué un console.error para mejor depuración
+        console.error('Error deleting plan:', err);
       }
     }
   };
@@ -86,16 +86,16 @@ export default function Planes() {
   }
 
   return (
-    <div className="container mt-5">
-      <h1 className="mb-4 text-center">Planes Personalizados para Ti 🥦</h1>
+    <div className="container mt-5" style={{ background: "#f6fff8", borderRadius: "1rem", padding: "2rem 1rem" }}>
+      <h1 className="mb-4 text-center" style={{ color: "#38b000" }}>Planes Personalizados para Ti 🥦</h1>
       <p className="text-muted text-center mb-4">
         Accede a planes adaptados a tus necesidades nutricionales, diseñados por profesionales.
       </p>
 
-      {/* Formulario para agregar/editar plan */}
+      {/* Formulario */}
       <form onSubmit={handleSubmit} className="mb-4">
-        <div className="card shadow-sm p-4">
-          <h4 className="mb-3">{editandoId ? 'Editar plan' : 'Agregar nuevo plan'}</h4>
+        <div className="card shadow-sm p-4" style={{ border: "1.5px solid #d1fadf", background: "#fff" }}>
+          <h4 className="mb-3 text-success">{editandoId ? 'Editar plan' : 'Agregar nuevo plan'}</h4>
           <div className="row">
             <div className="col-md-4 mb-2">
               <input
@@ -126,12 +126,13 @@ export default function Planes() {
               />
             </div>
           </div>
-          <button className="btn btn-success mt-3 w-100" type="submit">
+          <button className="btn btn-success mt-3 w-100 rounded-pill" type="submit" style={{ background: 'linear-gradient(90deg, #4CAF50 60%, #27ae60 100%)', border: 'none' }}>
             {editandoId ? 'Guardar cambios' : 'Agregar Plan'}
           </button>
         </div>
       </form>
 
+      {/* Planes Cards */}
       {loading ? (
         <div className="text-center">
           <div className="spinner-border text-success" role="status" />
@@ -144,30 +145,53 @@ export default function Planes() {
           {planes.length > 0 ? (
             planes.map((plan) => (
               <div key={plan.id} className="col-md-4 mb-4">
-                <div className="card shadow h-100">
-                  <div className="card-body d-flex flex-column justify-content-between">
-                    <div>
-                      <h5 className="card-title">{plan.nombre}</h5>
-                      <p className="card-text">{plan.descripcion}</p>
+                <div
+                  className={`flip-card h-100 ${flippedId === plan.id ? 'flipped' : ''}`}
+                  onClick={() => setFlippedId(flippedId === plan.id ? null : plan.id)}
+                  style={{
+                    perspective: 1000,
+                    cursor: "pointer",
+                    minHeight: 270,
+                    borderRadius: '1rem',
+                  }}
+                >
+                  <div className="flip-card-inner" style={{ height: '100%' }}>
+                    {/* Front */}
+                    <div className="flip-card-front card shadow h-100 p-4 d-flex flex-column justify-content-center align-items-center"
+                      style={{
+                        borderColor: "#27ae60",
+                        background: "#fff",
+                        boxShadow: "0 0.25rem 0.75rem rgba(39,174,96,0.09)"
+                      }}>
+                      <h5 className="card-title text-success">{plan.nombre}</h5>
                       <p className="card-text">
-                        <strong>💰 Precio:</strong> ${typeof plan.precio === 'string'
-                          ? parseFloat(plan.precio).toFixed(2)
-                          : plan.precio.toFixed(2)}
+                        <strong>Precio:</strong> <span style={{ color: '#38b000' }}>${typeof plan.precio === 'string' ? parseFloat(plan.precio).toFixed(2) : plan.precio.toFixed(2)}</span>
                       </p>
                     </div>
-                    <div className="d-flex gap-2 mt-2">
-                      <button
-                        className="btn btn-outline-primary w-100"
-                        onClick={() => handleEditar(plan)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="btn btn-outline-danger w-100"
-                        onClick={() => handleEliminar(plan.id)}
-                      >
-                        Eliminar
-                      </button>
+                    {/* Back */}
+                    <div className="flip-card-back card shadow h-100 p-4 d-flex flex-column justify-content-between align-items-center"
+                      style={{
+                        background: "#e6fff2",
+                        color: "#21693b"
+                      }}>
+                      <div>
+                        <h5 className="card-title">{plan.nombre}</h5>
+                        <p className="card-text">{plan.descripcion}</p>
+                      </div>
+                      <div className="d-flex gap-2 mt-3">
+                        <button className="btn btn-outline-primary w-100" onClick={() => handleEditar(plan)}>
+                          Editar
+                        </button>
+                        <button className="btn btn-outline-danger w-100" onClick={() => handleEliminar(plan.id)}>
+                          Eliminar
+                        </button>
+                        <button
+                          className="btn btn-outline-success w-100"
+                          onClick={e => { e.stopPropagation(); setFlippedId(null); }}
+                        >
+                          Volver
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

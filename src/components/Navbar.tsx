@@ -1,52 +1,80 @@
-// src/components/Navbar.tsx
-
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import UserMenu from './UserMenu'; // Asumo que este componente sigue existiendo y es funcional
+import UserMenu from './UserMenu';
 
-// Importa los componentes de react-bootstrap
 import { Navbar, Nav, Container } from 'react-bootstrap';
 
-// Renombra el componente de Navbar a AppNavbar para evitar conflicto de nombres con el import de react-bootstrap
 export default function AppNavbar() {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate(); // Necesario si UserMenu no maneja la navegación directamente para Cerrar Sesión
+  const location = useLocation();
+
+  // Helper para marcar activo
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    // Usa el componente Navbar de react-bootstrap
-    <Navbar bg="light" expand="lg" className="shadow-sm">
+    <Navbar
+      expand="lg"
+      className="shadow-sm px-2 py-2"
+      style={{
+        background: "#fff",
+        borderBottom: "2px solid #e6fff2",
+        zIndex: 50,
+        minHeight: 70,
+      }}
+      sticky="top"
+    >
       <Container>
-        {/* Navbar.Brand es para el logo/nombre de la marca. Usamos 'as={Link}' para integrar react-router-dom */}
-        <Navbar.Brand as={Link} to="/">Nutri Plans</Navbar.Brand>
+        <Navbar.Brand as={Link} to="/" className="navbar-logo" style={{ fontWeight: 700, color: "#38b000", fontSize: "1.7rem", letterSpacing: 1 }}>
+          <span role="img" aria-label="broccoli" style={{ marginRight: 8 }}>🥦</span>
+          Nutri <span style={{ color: "#27ae60" }}>Plans</span>
+        </Navbar.Brand>
+        <Navbar.Toggle aria-controls="navbar-nav" />
 
-        {/* Navbar.Toggle es el botón hamburguesa. 'aria-controls' debe coincidir con el 'id' de Navbar.Collapse */}
-        <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-
-        {/* Navbar.Collapse es el contenido que se oculta/muestra al hacer clic en el botón hamburguesa */}
-        <Navbar.Collapse id="responsive-navbar-nav" className="justify-content-end">
-          {/* Nav agrupa los enlaces de navegación */}
-          <Nav className="align-items-center">
-            {/* Nav.Link es para los enlaces de navegación. Usamos 'as={Link}' para integrar react-router-dom */}
-            <Nav.Link as={Link} to="/">Inicio</Nav.Link>
-
+        <Navbar.Collapse id="navbar-nav" className="justify-content-end">
+          <Nav className="align-items-center gap-1">
             {isAuthenticated ? (
               <>
-                <Nav.Link as={Link} to="/dashboard">Dashboard</Nav.Link>
-                <Nav.Link as={Link} to="/planes">Planes</Nav.Link>
-                <Nav.Link as={Link} to="/dietas">Dietas</Nav.Link>
-                <Nav.Link as={Link} to="/seguimiento">Seguimiento</Nav.Link>
-                <Nav.Link as={Link} to="/pacientes">Pacientes</Nav.Link>
-                <Nav.Link as={Link} to="/nutricionistas">Nutricionistas</Nav.Link>
-                <Nav.Link as={Link} to="/pagos">Pagos</Nav.Link>
-                {/* UserMenu ahora debería ir dentro de un Nav.Item o directamente en Nav si UserMenu es solo el Dropdown */}
-                {/* Si UserMenu es un <li>, asegúrate de que no duplique el <li> */}
-                <UserMenu /> {/* Asumo que UserMenu es un componente que renderiza sus propios <li> o es un Dropdown */}
+                <Nav.Link as={Link}
+                  to="/dashboard"
+                  className={isActive('/dashboard') ? 'nav-active' : ''}
+                >Dashboard</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/planes"
+                  className={isActive('/planes') ? 'nav-active' : ''}
+                >Planes</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/dietas"
+                  className={isActive('/dietas') ? 'nav-active' : ''}
+                >Dietas</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/seguimiento"
+                  className={isActive('/seguimiento') ? 'nav-active' : ''}
+                >Seguimiento</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/pacientes"
+                  className={isActive('/pacientes') ? 'nav-active' : ''}
+                >Pacientes</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/nutricionistas"
+                  className={isActive('/nutricionistas') ? 'nav-active' : ''}
+                >Nutricionistas</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/pagos"
+                  className={isActive('/pagos') ? 'nav-active' : ''}
+                >Pagos</Nav.Link>
+                <UserMenu />
               </>
             ) : (
               <>
-                <Nav.Link as={Link} to="/login">Iniciar sesión</Nav.Link>
-                <Nav.Link as={Link} to="/register">Registrarse</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/login"
+                  className={isActive('/login') ? 'nav-active' : ''}
+                >Iniciar sesión</Nav.Link>
+                <Nav.Link as={Link}
+                  to="/register"
+                  className={isActive('/register') ? 'nav-active' : ''}
+                >Registrarse</Nav.Link>
               </>
             )}
           </Nav>

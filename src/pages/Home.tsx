@@ -39,20 +39,29 @@ export default function Home() {
   ];
 
   return (
-    <div className="bg-white text-gray-800 font-sans">
+    <div style={{ background: "#f6fff8", minHeight: "100vh" }}>
       {/* Hero */}
-      <section className="bg-white border-bottom shadow-sm">
-        <div className="container py-5 d-flex flex-column-reverse flex-lg-row align-items-center justify-content-between gap-4">
+      <section
+        style={{
+          background: 'linear-gradient(90deg, #27ae60 0%, #4CAF50 100%)',
+          color: 'white',
+          borderRadius: '0 0 2rem 2rem',
+          boxShadow: '0 2px 24px 0 rgba(39,174,96,0.09)'
+        }}
+        className="py-5 mb-4"
+      >
+        <div className="container d-flex flex-column-reverse flex-lg-row align-items-center justify-content-between gap-4">
           <div className="text-center text-lg-start">
             <h1 className="display-4 fw-bold mb-3">
-              Transforma tu bienestar con <span className="text-success">Nutri Plans</span>
+              Transforma tu bienestar con <span style={{ color: '#d9f99d' }}>Nutri Plans</span>
             </h1>
-            <p className="lead text-secondary mb-4">
+            <p className="lead text-white-50 mb-4">
               Organiza tus hábitos, mejora tu alimentación y lleva un control visual de tu progreso. Diseñado para acompañarte paso a paso.
             </p>
             {!isAuthenticated && (
               <button
-                className="btn btn-success btn-lg px-4 py-2 text-white rounded-pill shadow-sm"
+                className="btn btn-success btn-lg px-4 py-2 rounded-pill shadow"
+                style={{ background: 'linear-gradient(90deg, #4CAF50 60%, #27ae60 100%)', border: 'none' }}
                 onClick={() => navigate('/register')}
               >
                 Empieza ahora
@@ -63,14 +72,14 @@ export default function Home() {
             src="https://revistavive.com/wp-content/uploads/2020/12/PLAN-NUTRICIONAL-3.png"
             alt="Nutrición saludable"
             className="img-fluid rounded-4 shadow-lg"
-            style={{ maxWidth: 480 }}
+            style={{ maxWidth: 420, border: '4px solid #fff' }}
           />
         </div>
       </section>
 
       {/* Funcionalidades */}
       <section className="container py-5">
-        <h2 className="text-center display-6 fw-semibold text-dark mb-5">¿Qué puedes hacer con Nutri Plans?</h2>
+        <h2 className="text-center display-6 fw-semibold mb-5" style={{ color: '#38b000' }}>¿Qué puedes hacer con Nutri Plans?</h2>
         <div className="row text-center">
           {[
             {
@@ -87,7 +96,7 @@ export default function Home() {
             },
           ].map((item, i) => (
             <div className="col-md-4 mb-4" key={i}>
-              <div className="card border-0 shadow-sm h-100 hover-shadow-lg transition rounded-4">
+              <div className="card border-0 shadow-sm h-100 rounded-4" style={{ borderColor: '#27ae60' }}>
                 <div className="card-body">
                   <h5 className="card-title text-success fw-bold mb-2">{item.title}</h5>
                   <p className="card-text text-muted">{item.text}</p>
@@ -99,32 +108,77 @@ export default function Home() {
       </section>
 
       {/* Planes populares con flip cards */}
-      <section className="bg-success-subtle py-5">
+      <section className="py-5" style={{ background: "#e6fff2" }}>
         <div className="container text-center">
-          <h2 className="display-6 fw-bold text-success mb-4">Planes populares</h2>
+          <h2 className="display-6 fw-bold mb-4" style={{ color: '#27ae60' }}>Planes populares</h2>
           <p className="text-secondary mb-5">Conoce los planes que más éxito han tenido entre nuestros usuarios.</p>
 
           <div className="row">
             {plans.map((plan, i) => (
               <div className="col-md-4 mb-4" key={i}>
-                <div className="flip-container" onClick={() => toggleFlip(i)}>
-                  <div className={`flip-card ${flippedIndex === i ? 'flip-rotate' : ''}`}>
-                    {/* Front */}
-                    <div className="flip-front bg-white p-3 shadow-sm">
+                <div
+                  className="flip-container"
+                  style={{ perspective: 1000, cursor: "pointer", height: "340px" }}
+                  onClick={() => toggleFlip(i)}
+                >
+                  <div
+                    className={`flip-card h-100 ${flippedIndex === i ? 'flip-rotate' : ''}`}
+                    style={{
+                      transition: 'transform 0.6s',
+                      transformStyle: 'preserve-3d',
+                      position: 'relative',
+                      height: '100%',
+                      borderRadius: '1rem',
+                      background: '#fff',
+                      boxShadow: '0 0.25rem 0.75rem rgba(52,199,89,0.09)'
+                    }}
+                  >
+                    {/* Frente */}
+                    <div
+                      className="flip-front"
+                      style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        backfaceVisibility: 'hidden',
+                        borderRadius: '1rem',
+                        padding: '1rem',
+                        background: '#fff',
+                        boxShadow: '0 0.25rem 0.75rem rgba(39,174,96,0.07)'
+                      }}
+                    >
                       <img
                         src={plan.img}
                         alt={plan.name}
                         className="w-100 mb-3 rounded"
-                        style={{ height: 160, objectFit: 'cover' }}
+                        style={{ height: 140, objectFit: 'cover', border: '2px solid #e6fff2' }}
                       />
                       <h5 className="text-success fw-bold">{plan.name}</h5>
                       <p className="text-muted">{plan.short}</p>
                     </div>
-                    {/* Back */}
-                    <div className="flip-back bg-white p-3 shadow-sm text-start">
+                    {/* Reverso */}
+                    <div
+                      className="flip-back"
+                      style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        borderRadius: '1rem',
+                        padding: '1rem',
+                        background: '#fff',
+                        boxShadow: '0 0.25rem 0.75rem rgba(39,174,96,0.07)'
+                      }}
+                    >
                       <h5 className="text-success fw-bold">{plan.name}</h5>
                       <p className="text-muted mt-3">{plan.detail}</p>
-                      <button className="btn btn-outline-secondary btn-sm mt-3">Volver</button>
+                      <button
+                        className="btn btn-outline-success btn-sm mt-3"
+                        onClick={e => { e.stopPropagation(); toggleFlip(i); }}
+                      >
+                        Volver
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -134,10 +188,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* CTA final */}
       <section className="bg-white py-5 border-top">
         <div className="container text-center">
-          <h2 className="display-6 fw-bold mb-3">
+          <h2 className="display-6 fw-bold mb-3" style={{ color: "#38b000" }}>
             Empieza hoy tu camino hacia una vida más saludable
           </h2>
           <p className="text-muted mb-4">
@@ -145,6 +199,7 @@ export default function Home() {
           </p>
           <button
             className="btn btn-success btn-lg px-4 py-2 rounded-pill shadow"
+            style={{ background: 'linear-gradient(90deg, #4CAF50 60%, #27ae60 100%)', border: 'none' }}
             onClick={() => navigate('/register')}
           >
             Registrarme ahora
@@ -153,7 +208,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-success text-white py-4 mt-5">
+      <footer className="py-4 mt-5" style={{ background: "#38b000", color: "#fff", borderRadius: "2rem 2rem 0 0" }}>
         <div className="container d-flex flex-column flex-md-row justify-content-between align-items-center">
           <p className="mb-2 mb-md-0">&copy; 2025 Nutri Plans. Todos los derechos reservados.</p>
           <div className="d-flex gap-3">
