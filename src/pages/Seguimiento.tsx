@@ -17,6 +17,26 @@ export default function Seguimiento() {
   const [semana, setSemana] = useState<number | undefined>(1);
   const [fotos, setFotos] = useState<string[]>([]);
 
+  // *** PUNTO CLAVE DE CORRECCIÓN Y DEPURACIÓN ***
+  // Verificamos si user existe Y si user.rol es EXACTAMENTE 'admin'
+  const isAdmin = user && user.rol === 'admin';
+
+  // Añadimos console.log para depuración
+  useEffect(() => {
+    console.log("--- DEBUG DE SEGUIMIENTO.TSX ---");
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("Objeto user:", user);
+    if (user) {
+      console.log("user.rol:", user.rol); // ¡Verifica este valor en la consola!
+      console.log("¿Es 'admin'?", user.rol === 'admin');
+    } else {
+      console.log("El objeto user es null o undefined.");
+    }
+    console.log("isAdmin (resultado final):", isAdmin);
+    console.log("-------------------------------");
+  }, [isAuthenticated, user, isAdmin]); // Dependencias para que se ejecute cuando cambien estos valores
+
+
   const fetchSeguimientoAndPacientes = async () => {
     setLoading(true);
     setError(null);
@@ -40,10 +60,18 @@ export default function Seguimiento() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Solo obtenemos datos si el usuario está autenticado Y es administrador
+    if (isAuthenticated && isAdmin) {
       fetchSeguimientoAndPacientes();
+    } else if (isAuthenticated && !isAdmin) {
+      // Si está autenticado pero no es admin, muestra un error y detiene la carga
+      setError("Acceso denegado. Esta página es solo para administradores.");
+      setLoading(false); // Detener el spinner si no es admin
+    } else {
+      // Si no está autenticado, asegura que no intente cargar y muestre el mensaje inicial
+      setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAdmin]); // 'isAdmin' se añade como dependencia
 
   // Filtra los registros del paciente seleccionado para la gráfica
   const seguimientoFiltrado = selectedPacienteId
@@ -69,6 +97,11 @@ export default function Seguimiento() {
     e.preventDefault();
     if (!isAuthenticated || !user) {
       alert("No estás autenticado.");
+      return;
+    }
+    // Verificar permisos de administrador antes de permitir el envío
+    if (!isAdmin) {
+      alert("No tienes permisos para agregar registros de seguimiento.");
       return;
     }
 
@@ -98,14 +131,26 @@ export default function Seguimiento() {
     }
   };
 
+  // 1. Mensaje para usuarios no autenticados
   if (!isAuthenticated || !token) {
     return (
       <div className="container mt-5 alert alert-warning">
-        Por favor inicia sesión para ver y registrar el seguimiento.
+        Por favor, inicia sesión para ver y registrar el seguimiento.
       </div>
     );
   }
 
+  // 2. Mensaje para usuarios autenticados pero que NO son administradores
+  if (!isAdmin) {
+    return (
+      <div className="container mt-5 alert alert-danger">
+        Acceso denegado. Esta página es solo para administradores.
+      </div>
+    );
+  }
+
+  // Si llegamos aquí, el usuario está autenticado Y es administrador.
+  // Procedemos a renderizar el contenido completo del componente.
   return (
     <div className="container mt-5 mb-5">
       <h1 className="mb-4 text-center text-success fw-bold">Gestión de Seguimiento de Pacientes 📈</h1>
