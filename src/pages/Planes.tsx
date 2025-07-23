@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getPlanes, Plan, createPlan, deletePlan, updatePlan } from '../api/planes';
+import { createPago } from '../api/pagos'; // Importa tu función para crear pagos
 import { useAuth } from '../context/AuthContext';
 
 export default function Planes() {
@@ -11,6 +12,10 @@ export default function Planes() {
 
   const [nuevoPlan, setNuevoPlan] = useState({ nombre: '', descripcion: '', precio: '' });
   const [editandoId, setEditandoId] = useState<number | null>(null);
+
+  // Control para compra paciente
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Detectar rol
   const userRole = user?.rol || 'paciente';
@@ -80,6 +85,31 @@ export default function Planes() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // --- Lógica de compra para el paciente ---
+  const handleComprar = async (plan: Plan) => {
+    if (!user || userRole !== 'paciente') return;
+    setIsProcessing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await createPago({
+        paciente: Number(user.id),
+        plan: plan.id,
+        monto: parseFloat(plan.precio.toString()), // <--- ¡CAMBIO APLICADO AQUÍ!
+        fecha: new Date().toISOString().split('T')[0]
+      });
+      setSuccess('¡Compra realizada con éxito! Puedes revisar tu historial de pagos.');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      // Es buena idea mostrar el error específico del backend si viene en err.message
+      setError(err.message || 'Error al realizar la compra.');
+      console.error("Error en handleComprar:", err); // Para ver el error completo en consola
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!isAuthenticated || !token) {
     return (
       <div className="container mt-5 alert alert-warning">
@@ -94,6 +124,10 @@ export default function Planes() {
       <p className="text-muted text-center mb-4">
         Accede a planes adaptados a tus necesidades nutricionales, diseñados por profesionales.
       </p>
+
+      {/* Mensaje de compra */}
+      {success && <div className="alert alert-success text-center">{success}</div>}
+      {error && <div className="alert alert-danger text-center">{error}</div>}
 
       {/* Formulario SOLO PARA ADMIN */}
       {userRole === 'admin' && (
@@ -183,7 +217,7 @@ export default function Planes() {
                         <h5 className="card-title">{plan.nombre}</h5>
                         <p className="card-text">{plan.descripcion}</p>
                       </div>
-                      <div className="d-flex gap-2 mt-3">
+                      <div className="d-flex gap-2 mt-3 w-100">
                         {/* SOLO ADMIN puede editar/eliminar */}
                         {userRole === 'admin' && (
                           <>
@@ -194,6 +228,16 @@ export default function Planes() {
                               Eliminar
                             </button>
                           </>
+                        )}
+                        {/* SOLO PACIENTE puede comprar */}
+                        {userRole === 'paciente' && (
+                          <button
+                            className="btn btn-success w-100"
+                            disabled={isProcessing}
+                            onClick={(e) => { e.stopPropagation(); handleComprar(plan); }}
+                          >
+                            {isProcessing ? 'Procesando...' : 'Adquirir Plan'}
+                          </button>
                         )}
                         <button
                           className="btn btn-outline-success w-100"

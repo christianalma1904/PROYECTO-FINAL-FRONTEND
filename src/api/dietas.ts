@@ -1,6 +1,7 @@
-import { getAuthHeaders } from "./utils";
+import { getAuthHeaders } from "./utils"; // Asumo que esto vive en 'src/api/utils.ts' o similar
 const API = process.env.REACT_APP_API_URL;
 
+// Reutiliza tus interfaces, están bien.
 export interface SemanaDieta {
   semana: number;
   menu: string[];
@@ -29,85 +30,81 @@ export interface CreateDietaPayload {
   fechaAsignacion: string;
 }
 
+// Función auxiliar para manejar errores de fetch
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido del servidor o respuesta no JSON' }));
+    // Si hay un status 401, lo indicamos explícitamente
+    if (res.status === 401) {
+      throw new Error(`401 Unauthorized: ${errorBody.message || 'Credenciales inválidas o token expirado.'}`);
+    }
+    throw new Error(errorBody.message || `Error en la solicitud: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
 // Obtener todas las dietas
 export async function getAllDietas(): Promise<Dieta[]> {
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
+  // Opcional: Debugging para ver si el token se está añadiendo
+  // console.log("Headers para getAllDietas:", headers);
+
   const res = await fetch(`${API}/dietas`, {
     method: 'GET',
-    headers: getAuthHeaders(),
+    headers: headers,
   });
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(error.message || 'Error al obtener todas las dietas');
-  }
-
-  return res.json();
+  return handleResponse<Dieta[]>(res);
 }
 
 // Obtener las dietas de un usuario/paciente
 export async function getMyDietas(userId: string): Promise<Dieta[]> {
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/dietas?paciente_id=${userId}`, {
     method: 'GET',
-    headers: getAuthHeaders(),
+    headers: headers,
   });
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(error.message || `Error al obtener dietas para el paciente ${userId}`);
-  }
-
-  return res.json();
+  return handleResponse<Dieta[]>(res);
 }
 
 // Crear dieta (POST)
 export async function createDieta(dieta: CreateDietaPayload): Promise<Dieta> {
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/dietas`, {
     method: 'POST',
     headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
+      ...headers, // Incluye el Authorization header y 'Content-Type'
+      // 'Content-Type': 'application/json', // <--- Eliminado: ya está en getAuthHeaders
     },
     body: JSON.stringify(dieta),
   });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido del servidor o respuesta no JSON' }));
-    throw new Error(errorBody.message || 'Error al crear dieta');
-  }
-
-  return res.json();
+  return handleResponse<Dieta>(res);
 }
 
 // Actualizar dieta (PUT /dietas/:id)
 export async function updateDieta(id: string, dieta: Partial<CreateDietaPayload>): Promise<Dieta> {
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/dietas/${id}`, {
     method: 'PUT',
     headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
+      ...headers, // Incluye el Authorization header y 'Content-Type'
+      // 'Content-Type': 'application/json', // <--- Eliminado: ya está en getAuthHeaders
     },
     body: JSON.stringify(dieta),
   });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido al actualizar dieta.' }));
-    throw new Error(errorBody.message || 'Error al actualizar dieta');
-  }
-
-  return res.json();
+  return handleResponse<Dieta>(res);
 }
 
 // Eliminar dieta (DELETE /dietas/:id)
 export async function deleteDieta(id: string): Promise<{ message: string }> {
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/dietas/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers: headers,
   });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido al eliminar dieta.' }));
-    throw new Error(errorBody.message || 'Error al eliminar dieta');
-  }
-
-  return res.json();
+  return handleResponse<{ message: string }>(res);
 }

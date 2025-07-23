@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as apiLogin } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-// Si vas a usar componentes de react-bootstrap para el formulario, los importarías aquí
-// import { Form, Button, Card, Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
-
+// No es necesario importar componentes específicos de react-bootstrap
+// si solo estás usando las clases de CSS de Bootstrap directamente.
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -22,7 +21,7 @@ export default function Login() {
     try {
       const res = await apiLogin(email, password);
       authLogin(res.access_token);
-      navigate('/dashboard');
+      navigate('/dashboard'); // Asumiendo que el dashboard es la página de inicio post-login
     } catch (err: any) {
       console.error(err);
       // Mensaje de error más amigable para el usuario
@@ -33,61 +32,65 @@ export default function Login() {
   };
 
   return (
-    // Usamos d-flex y flex-column para centrar verticalmente si la altura es suficiente
-    // Añadimos py-5 para un padding vertical en todos los tamaños, y px-3 para padding horizontal en móviles
-    // La clase h-100 asegura que ocupe el 100% de la altura disponible dentro de su padre si es flex
-    <div className="d-flex flex-column justify-content-center align-items-center py-5 px-3" style={{ minHeight: '100vh' }}>
+    // Contenedor principal con el fondo verde degradado
+    // min-vh-100 asegura que ocupe al menos el 100% de la altura de la vista
+    // d-flex, justify-content-center, align-items-center para centrar el contenido
+    <div
+      className="d-flex justify-content-center align-items-center min-vh-100 py-5"
+      style={{
+        background: 'linear-gradient(to bottom right, #e6ffe6, #c2f0c2, #85e085)', // Degradado de verdes sutiles
+      }}
+    >
       {/*
-        Card de Bootstrap:
-        - shadow para una sombra sutil
-        - p-4 para padding interno
-        - mx-auto para centrado horizontal (margen auto en x)
-        - w-100 para que ocupe el 100% del ancho disponible
-        - max-width: 400px es bueno, pero podemos hacerla responsive con w-sm-75 w-md-50 w-lg-30
-          o simplemente limitarla con una clase de Bootstrap como col-12 col-md-6 col-lg-4 dentro de un Row/Col
-          Para este caso, manteniendo tu estilo, ajustaremos el maxWidth con responsive classes.
+        Card de Bootstrap para el formulario:
+        - shadow-lg: Sombra grande para un efecto de profundidad.
+        - p-4 p-md-5: Padding responsivo, más grande en pantallas medianas y superiores.
+        - rounded-4: Bordes más redondeados.
+        - bg-white: Fondo blanco para el card.
+        - w-100: Ocupa el 100% del ancho del padre.
+        - max-width: 450px: Limita el ancho máximo para que no se extienda demasiado en pantallas grandes.
       */}
-      <div className="card shadow p-4" style={{ maxWidth: '400px', width: '100%' }}>
-        <h2 className="text-center mb-4">Iniciar sesión</h2>
+      <div className="card shadow-lg p-4 p-md-5 bg-white rounded-4" style={{ maxWidth: '450px', width: '100%' }}>
+        <h2 className="text-center mb-4 fw-bold text-success">Iniciar Sesión</h2> {/* Título con color verde */}
 
         {error && (
-          <div className="alert alert-danger text-center animate__animated animate__fadeIn mb-3" role="alert">
+          <div className="alert alert-danger text-center animate__animated animate__fadeIn mb-4" role="alert">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="emailInput" className="form-label visually-hidden">Correo electrónico</label> {/* visually-hidden para accesibilidad si ya hay placeholder */}
+            <label htmlFor="emailInput" className="form-label visually-hidden">Correo electrónico</label>
             <input
               type="email"
-              className="form-control form-control-lg" // form-control-lg para campos más grandes y fáciles de tocar
+              className="form-control form-control-lg" // Campos grandes
               id="emailInput"
-              placeholder="ejemplo@correo.com"
+              placeholder="Correo electrónico" // Placeholder directo como en el diseño
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               aria-label="Correo electrónico"
-              autoComplete="email" // Sugerencia de autocompletado del navegador
+              autoComplete="email"
             />
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="passwordInput" className="form-label visually-hidden">Contraseña</label> {/* visually-hidden para accesibilidad si ya hay placeholder */}
+          <div className="mb-4"> {/* mb-4 para más espacio antes del botón */}
+            <label htmlFor="passwordInput" className="form-label visually-hidden">Contraseña</label>
             <input
               type="password"
-              className="form-control form-control-lg" // form-control-lg para campos más grandes
+              className="form-control form-control-lg" // Campos grandes
               id="passwordInput"
-              placeholder="********"
+              placeholder="Contraseña" // Placeholder directo como en el diseño
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               aria-label="Contraseña"
-              autoComplete="current-password" // Sugerencia de autocompletado del navegador
+              autoComplete="current-password"
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg w-100" disabled={loading}>
+          <button type="submit" className="btn btn-success btn-lg w-100 py-2 fw-bold" disabled={loading}>
             {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -99,9 +102,9 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Puedes añadir un enlace para registrarse si no lo tienes en el Navbar */}
-        <p className="text-center mt-3">
-          ¿No tienes una cuenta? <a href="/register">Regístrate aquí</a>
+        {/* Enlace para registrarse con estilo similar al diseño */}
+        <p className="text-center mt-4 text-muted">
+          ¿No tienes una cuenta? <a href="/register" className="text-decoration-none text-success fw-semibold">Regístrate aquí</a>
         </p>
       </div>
     </div>

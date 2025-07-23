@@ -268,12 +268,103 @@ export default function Pagos() {
     );
   }
 
+  // **** AHORA SÍ, el bloque de compra de plan debe tener su contenido ****
   if (planIdFromUrl && planDetailsForPurchase) {
-    // --- COMPRA PLAN (todos los pacientes pueden comprar) ---
     return (
-      // ...tu código de compra no cambia...
-      // Puedes dejar igual este bloque
-      <>{/* ...todo el bloque de compra aquí igual que tu versión anterior... */}</>
+      <div className="container py-5">
+        <h1 className="mb-4 text-center fw-bold text-success display-4 animate-fade-in">Adquirir Plan</h1>
+        <p className="lead text-muted text-center mb-5 animate-fade-in">
+          Complete la información para adquirir el plan "{planDetailsForPurchase.nombre}".
+        </p>
+        {error && <Alert variant="danger" className="mb-4 text-center fade-in">{error}</Alert>}
+        {successMessage && <Alert variant="success" className="mb-4 text-center fade-in">{successMessage}</Alert>}
+
+        <Card className="shadow-lg border-0 rounded-4 p-4 p-md-5 mx-auto animate-zoom-in" style={{ maxWidth: '600px' }}>
+          <Card.Body>
+            <Form onSubmit={handlePurchaseSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>Plan Seleccionado</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={planDetailsForPurchase.nombre}
+                  readOnly
+                  disabled
+                  className="bg-light"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Monto</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={`$${planDetailsForPurchase.precio.toFixed(2)}`}
+                  readOnly
+                  disabled
+                  className="bg-light"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Número de Tarjeta</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="tarjeta"
+                  placeholder="XXXX XXXX XXXX XXXX"
+                  value={purchaseForm.tarjeta}
+                  onChange={(e) => setPurchaseForm({ ...purchaseForm, tarjeta: e.target.value })}
+                  maxLength={19}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Fecha de Vencimiento (MM/AA)</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="fecha"
+                  placeholder="MM/AA"
+                  value={purchaseForm.fecha}
+                  onChange={(e) => setPurchaseForm({ ...purchaseForm, fecha: e.target.value })}
+                  maxLength={5}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-4">
+                <Form.Label>Código de Seguridad (CVV)</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="codigo"
+                  placeholder="CVV"
+                  value={purchaseForm.codigo}
+                  onChange={(e) => setPurchaseForm({ ...purchaseForm, codigo: e.target.value })}
+                  maxLength={4}
+                  required
+                />
+              </Form.Group>
+
+              <Button
+                variant="success"
+                type="submit"
+                className="w-100 rounded-pill fw-bold custom-btn-gradient-green"
+                disabled={isProcessingPurchase}
+              >
+                {isProcessingPurchase ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Procesando...
+                  </>
+                ) : (
+                  'Confirmar Compra'
+                )}
+              </Button>
+            </Form>
+          </Card.Body>
+        </Card>
+      </div>
     );
   }
 
@@ -364,21 +455,166 @@ export default function Pagos() {
       {/* Modal Crear Pago (SOLO ADMIN) */}
       {userRole === 'admin' && (
         <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered animation>
-          {/* ...igual que tu código, no cambia... */}
+          <Modal.Header closeButton className="bg-success text-white">
+            <Modal.Title><i className="bi bi-cash-stack me-2"></i> Registrar Nuevo Pago</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <Form onSubmit={handleCreatePagoSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>Paciente</Form.Label>
+                <Form.Select
+                  name="paciente"
+                  value={newPagoForm.paciente}
+                  onChange={handleNewPagoChange}
+                  required
+                >
+                  <option value={0}>Selecciona un Paciente</option>
+                  {pacientes.map(paciente => (
+                    <option key={paciente.id} value={paciente.id}>
+                      {paciente.nombre} ({paciente.email})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Plan</Form.Label>
+                <Form.Select
+                  name="plan"
+                  value={newPagoForm.plan}
+                  onChange={handleNewPagoChange}
+                  required
+                >
+                  <option value={0}>Selecciona un Plan</option>
+                  {planes.map(plan => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.nombre} (${plan.precio})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Monto</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="monto"
+                  value={newPagoForm.monto}
+                  onChange={handleNewPagoChange}
+                  step="0.01"
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Fecha</Form.Label>
+                <Form.Control
+                  type="date"
+                  name="fecha"
+                  value={newPagoForm.fecha}
+                  onChange={handleNewPagoChange}
+                  required
+                />
+              </Form.Group>
+              <Button variant="success" type="submit" className="w-100 mt-3" disabled={isCreating}>
+                {isCreating ? <Spinner animation="border" size="sm" /> : 'Crear Pago'}
+              </Button>
+            </Form>
+          </Modal.Body>
         </Modal>
       )}
 
       {/* Modal Editar Pago (SOLO ADMIN) */}
-      {userRole === 'admin' && (
+      {userRole === 'admin' && currentEditPago && (
         <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered animation>
-          {/* ...igual que tu código, no cambia... */}
+          <Modal.Header closeButton className="bg-info text-white">
+            <Modal.Title><i className="bi bi-pencil-square me-2"></i> Editar Pago</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <Form onSubmit={handleUpdatePagoSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>ID del Pago</Form.Label>
+                <Form.Control type="text" value={currentEditPago.id} disabled />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Paciente</Form.Label>
+                <Form.Select
+                  name="paciente"
+                  value={editPagoForm.paciente}
+                  onChange={handleEditPagoChange}
+                  required
+                >
+                  <option value={0}>Selecciona un Paciente</option>
+                  {pacientes.map(paciente => (
+                    <option key={paciente.id} value={paciente.id}>
+                      {paciente.nombre} ({paciente.email})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Plan</Form.Label>
+                <Form.Select
+                  name="plan"
+                  value={editPagoForm.plan}
+                  onChange={handleEditPagoChange}
+                  required
+                >
+                  <option value={0}>Selecciona un Plan</option>
+                  {planes.map(plan => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.nombre} (${plan.precio})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Monto</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="monto"
+                  value={editPagoForm.monto}
+                  onChange={handleEditPagoChange}
+                  step="0.01"
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Fecha</Form.Label>
+                <Form.Control
+                  type="date"
+                  name="fecha"
+                  value={editPagoForm.fecha}
+                  onChange={handleEditPagoChange}
+                  required
+                />
+              </Form.Group>
+              <Button variant="info" type="submit" className="w-100 mt-3" disabled={isUpdating}>
+                {isUpdating ? <Spinner animation="border" size="sm" /> : 'Actualizar Pago'}
+              </Button>
+            </Form>
+          </Modal.Body>
         </Modal>
       )}
 
       {/* Modal Eliminar Pago (SOLO ADMIN) */}
-      {userRole === 'admin' && (
+      {userRole === 'admin' && pagoToDelete && (
         <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered animation>
-          {/* ...igual que tu código, no cambia... */}
+          <Modal.Header closeButton className="bg-danger text-white">
+            <Modal.Title><i className="bi bi-exclamation-triangle-fill me-2"></i> Confirmar Eliminación</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <p>¿Estás seguro de que quieres eliminar el pago con ID: <strong>{pagoToDelete.id}</strong>?</p>
+            <p className="text-muted">Esta acción no se puede deshacer.</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? <Spinner animation="border" size="sm" /> : 'Eliminar'}
+            </Button>
+          </Modal.Footer>
         </Modal>
       )}
     </div>

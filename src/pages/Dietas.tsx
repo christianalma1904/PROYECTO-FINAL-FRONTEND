@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useReducer, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; // Asegúrate de que esta ruta sea correcta
 import {
   Dieta, getAllDietas, createDieta, updateDieta, deleteDieta,
   SemanaDieta, CreateDietaPayload
@@ -7,7 +7,7 @@ import {
 import { getPlanes, Plan } from '../api/planes';
 import { getPacientes, Paciente } from '../api/pacientes';
 
-// Interfaces para el estado del formulario
+// Interfaces para el estado del formulario (estas están bien)
 interface DietaFormState {
   nombre: string;
   descripcion: string;
@@ -81,7 +81,8 @@ const dietaFormReducer = (state: DietaFormState, action: DietaFormAction): Dieta
 };
 
 export default function Dietas() {
-  const { token, isAuthenticated, user } = useAuth();
+  // Obtenemos token, isAuthenticated, user Y logout del contexto
+  const { token, isAuthenticated, user, logout } = useAuth(); // <-- Asegúrate de importar 'logout'
   const isAdmin = user?.rol === 'admin';
 
   const [dietas, setDietas] = useState<Dieta[]>([]);
@@ -109,36 +110,51 @@ export default function Dietas() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      setError(null);
+      setError(null); // Limpiar errores previos
       try {
+        // Llama a las funciones API SIN PASAR EL TOKEN
         const [dietasData, planesData, pacientesData] = await Promise.all([
-          getAllDietas(),
-          getPlanes(),
-          getPacientes(),
+          getAllDietas(),   // <-- ¡Aquí ya no se pasa el token!
+          getPlanes(),       // <-- ¡Aquí ya no se pasa el token!
+          getPacientes(),    // <-- ¡Aquí ya no se pasa el token!
         ]);
         setDietas(dietasData);
         setPlanes(planesData);
         setPacientes(pacientesData);
       } catch (err: any) {
-        setError('Error al cargar dietas, planes o pacientes. Intenta de nuevo más tarde.');
+        console.error("Error al cargar datos iniciales:", err);
+        // Manejo específico para errores 401 Unauthorized
+        if (err.message && err.message.includes('401 Unauthorized')) {
+          setError('Tu sesión ha expirado o no tienes permisos. Por favor, inicia sesión de nuevo.');
+          logout(); // Llama a la función logout del contexto para limpiar la sesión
+        } else {
+          setError('Error al cargar dietas, planes o pacientes. Intenta de nuevo más tarde.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (isAuthenticated && token) {
+    // Solo carga los datos si el usuario está autenticado
+    if (isAuthenticated) {
       fetchData();
+    } else {
+      // Si no está autenticado, y si no hay dietas, planes o pacientes cargados,
+      // puedes establecer el loading en false y un mensaje si lo deseas.
+      setLoading(false);
+      // setError("No estás autenticado para ver esta información."); // Opcional
     }
-  }, [isAuthenticated, token]);
+    // `isAuthenticated` es la dependencia clave. `logout` también si es una función estable.
+  }, [isAuthenticated, logout]); // Añade logout como dependencia para useCallback si lo usas
 
   // Sincronizar paciente_id con el usuario loggeado si es el primero en cargar
   useEffect(() => {
     if (user?.id && formState.paciente_id === '') {
-      dispatch({ type: 'SET_FIELD', field: 'paciente_id', value: user.id });
+      dispatch({ type: 'SET_FIELD', field: 'paciente_id', value: String(user.id) }); // Asegúrate de que user.id sea string si paciente_id lo es
     }
   }, [user?.id, formState.paciente_id]);
 
-  // HANDLERS FORM
+  // HANDLERS FORM (Estos están bien)
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name in formState && typeof formState[name as keyof DietaFormState] === 'string') {
@@ -177,14 +193,22 @@ export default function Dietas() {
 
   const handleEliminarDieta = useCallback(async (id: string) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar esta dieta? Esta acción es irreversible.')) return;
+    // Ya no es necesario el chequeo explícito de `if (!token)` aquí,
+    // el `getAuthHeaders` y el `handleResponse` se encargarán del 401.
     try {
-      await deleteDieta(id);
+      await deleteDieta(id); // <-- ¡Aquí ya no se pasa el token!
       setDietas(prev => prev.filter(d => (d._id || d.id) !== id));
       alert('Dieta eliminada con éxito.');
-    } catch {
-      alert('Error al eliminar la dieta. Por favor, inténtalo de nuevo.');
+    } catch (err: any) {
+      console.error("Error al eliminar dieta:", err);
+      if (err.message && err.message.includes('401 Unauthorized')) { // <-- Verifica el mensaje de error
+        alert('Tu sesión ha expirado o no tienes permisos. Por favor, inicia sesión de nuevo.');
+        logout(); // Cierra la sesión
+      } else {
+        alert('Error al eliminar la dieta. Por favor, inténtalo de nuevo.');
+      }
     }
-  }, []);
+  }, [logout]); // Dependencia de logout
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +231,9 @@ export default function Dietas() {
       return;
     }
 
+    // Ya no es necesario el chequeo explícito de `if (!token)` aquí,
+    // el `getAuthHeaders` y el `handleResponse` se encargarán del 401.
+
     const payloadToSend: CreateDietaPayload = {
       nombre,
       descripcion,
@@ -218,29 +245,50 @@ export default function Dietas() {
 
     try {
       if (editandoId) {
-        const updatedDieta = await updateDieta(editandoId, payloadToSend);
+        const updatedDieta = await updateDieta(editandoId, payloadToSend); // <-- ¡Aquí ya no se pasa el token!
         setDietas(prev =>
           prev.map(d => (d._id === editandoId || d.id === editandoId ? updatedDieta : d))
         );
         setEditandoId(null);
         alert('Dieta actualizada con éxito.');
       } else {
-        const newDieta = await createDieta(payloadToSend);
+        const newDieta = await createDieta(payloadToSend); // <-- ¡Aquí ya no se pasa el token!
         setDietas(prev => [...prev, newDieta]);
         alert('Dieta creada con éxito.');
       }
       dispatch({ type: 'RESET_FORM' });
-    } catch {
-      alert('Hubo un error al guardar la dieta. Por favor, inténtalo de nuevo.');
+    } catch (err: any) {
+      console.error("Error al guardar dieta:", err);
+      if (err.message && err.message.includes('401 Unauthorized')) { // <-- Verifica el mensaje de error
+        alert('Tu sesión ha expirado o no tienes permisos para realizar esta acción. Por favor, inicia sesión de nuevo.');
+        logout(); // Cierra la sesión
+      } else {
+        alert('Hubo un error al guardar la dieta. Por favor, inténtalo de nuevo.');
+      }
     }
-  }, [formState, editandoId]);
+  }, [formState, editandoId, logout]); // Dependencia de logout
 
-  if (!isAuthenticated || !token) {
+  if (!isAuthenticated) { // Si no está autenticado, muestra un mensaje
     return (
       <div className="container mt-5 alert alert-warning text-center">
         Por favor, <b>inicia sesión</b> para visualizar y gestionar las dietas disponibles.
       </div>
     );
+  }
+
+  // Si está autenticado pero loading, muestra el spinner global
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-success" role="status" style={{ width: '3rem', height: '3rem' }} />
+        <p className="mt-3 fs-5 text-success">Cargando dietas...</p>
+      </div>
+    );
+  }
+
+  // Si hay un error al cargar los datos iniciales
+  if (error && dietas.length === 0) { // Muestra el error si no hay dietas cargadas
+    return <div className="alert alert-danger text-center p-3 mt-5">{error}</div>;
   }
 
   return (
@@ -416,92 +464,88 @@ export default function Dietas() {
       <hr className="my-5" />
       <h2 className="mb-4 text-center text-primary fw-bold">Listado de Dietas Existentes</h2>
 
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-success" role="status" style={{ width: '3rem', height: '3rem' }} />
-          <p className="mt-3 fs-5 text-success">Cargando dietas...</p>
-        </div>
-      ) : error ? (
-        <div className="alert alert-danger text-center p-3">{error}</div>
-      ) : (
+      {/* Aquí el `loading` y `error` ya se manejan al inicio, pero se puede añadir un `error` condicional si solo afecta la lista */}
+      {error && dietas.length > 0 && ( // Muestra error solo si hay dietas ya cargadas pero ocurre otro error después
+        <div className="alert alert-danger text-center p-3 mb-4">{error}</div>
+      )}
+
+      {dietas.length > 0 ? (
         <div className="row g-4">
-          {dietas.length > 0 ? (
-            dietas
-              .slice()
-              .sort((a, b) =>
-                b.fechaAsignacion && a.fechaAsignacion
-                  ? new Date(b.fechaAsignacion).getTime() - new Date(a.fechaAsignacion).getTime()
-                  : 0
-              )
-              .map((dieta) => (
-                <div key={dieta._id || dieta.id} className="col-12 col-md-6 col-lg-4">
-                  <div className="card h-100 shadow-sm border-0 animate__animated animate__fadeInUp">
-                    <div className="card-body d-flex flex-column">
-                      <h5 className="card-title text-success fw-bold mb-2">
-                        {dieta.nombre || 'Dieta sin Nombre'}
-                      </h5>
-                      <p className="card-text text-muted mb-2 flex-grow-1">{dieta.descripcion || 'Sin descripción detallada.'}</p>
-                      <hr className="my-2" />
-                      <div className="d-flex flex-wrap gap-2 mb-3">
-                        <span className="badge bg-success-subtle text-success">
-                          📅 Asignada: {dieta.fechaAsignacion
-                            ? new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', {
-                              year: 'numeric', month: 'long', day: 'numeric'
-                            })
-                            : 'Fecha no disponible'}
-                        </span>
-                        <span className="badge bg-info-subtle text-info">
-                          🧾 Plan: {planes.find(p => p.id === Number(dieta.plan_id))?.nombre || `ID: ${dieta.plan_id}`}
-                        </span>
-                        <span className="badge bg-primary-subtle text-primary">
-                          👤 Paciente: {pacientes.find(p => p.id === Number(dieta.paciente_id))?.nombre || `ID: ${dieta.paciente_id}`}
-                        </span>
-                      </div>
-                      {dieta.semanas && dieta.semanas.length > 0 && (
-                        <details className="mb-3">
-                          <summary className="fw-semibold text-primary" style={{ cursor: "pointer" }}>
-                            Ver Menú Semanal ({dieta.semanas.length} semanas) <span className="ms-1" style={{ fontSize: '0.8em' }}>▼</span>
-                          </summary>
-                          <ul className="list-group list-group-flush mt-2 border rounded-1">
-                            {dieta.semanas
-                              .slice()
-                              .sort((a, b) => a.semana - b.semana)
-                              .map((s, idx) => (
-                                <li key={idx} className="list-group-item py-2">
-                                  <strong className="text-dark">Semana {s.semana}:</strong> <br />
-                                  <small className="text-secondary">{s.menu.join(', ')}</small>
-                                </li>
-                              ))}
-                          </ul>
-                        </details>
-                      )}
-                      {/* BOTONES DE ACCIÓN SOLO PARA ADMIN */}
-                      {isAdmin && (
-                        <div className="d-flex gap-2 mt-auto pt-2 border-top">
-                          <button
-                            className="btn btn-outline-primary btn-sm flex-fill"
-                            onClick={() => handleEditarDieta(dieta)}
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button
-                            className="btn btn-outline-danger btn-sm flex-fill"
-                            onClick={() => handleEliminarDieta(dieta._id || dieta.id || '')}
-                          >
-                            🗑️ Eliminar
-                          </button>
-                        </div>
-                      )}
+          {dietas
+            .slice()
+            .sort((a, b) =>
+              b.fechaAsignacion && a.fechaAsignacion
+                ? new Date(b.fechaAsignacion).getTime() - new Date(a.fechaAsignacion).getTime()
+                : 0
+            )
+            .map((dieta) => (
+              <div key={dieta._id || dieta.id} className="col-12 col-md-6 col-lg-4">
+                <div className="card h-100 shadow-sm border-0 animate__animated animate__fadeInUp">
+                  <div className="card-body d-flex flex-column">
+                    <h5 className="card-title text-success fw-bold mb-2">
+                      {dieta.nombre || 'Dieta sin Nombre'}
+                    </h5>
+                    <p className="card-text text-muted mb-2 flex-grow-1">{dieta.descripcion || 'Sin descripción detallada.'}</p>
+                    <hr className="my-2" />
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                      <span className="badge bg-success-subtle text-success">
+                        📅 Asignada: {dieta.fechaAsignacion
+                          ? new Date(dieta.fechaAsignacion).toLocaleDateString('es-ES', {
+                            year: 'numeric', month: 'long', day: 'numeric'
+                          })
+                          : 'Fecha no disponible'}
+                      </span>
+                      <span className="badge bg-info-subtle text-info">
+                        🧾 Plan: {planes.find(p => p.id === Number(dieta.plan_id))?.nombre || `ID: ${dieta.plan_id}`}
+                      </span>
+                      <span className="badge bg-primary-subtle text-primary">
+                        👤 Paciente: {pacientes.find(p => p.id === Number(dieta.paciente_id))?.nombre || `ID: ${dieta.paciente_id}`}
+                      </span>
                     </div>
+                    {dieta.semanas && dieta.semanas.length > 0 && (
+                      <details className="mb-3">
+                        <summary className="fw-semibold text-primary" style={{ cursor: "pointer" }}>
+                          Ver Menú Semanal ({dieta.semanas.length} semanas) <span className="ms-1" style={{ fontSize: '0.8em' }}>▼</span>
+                        </summary>
+                        <ul className="list-group list-group-flush mt-2 border rounded-1">
+                          {dieta.semanas
+                            .slice()
+                            .sort((a, b) => a.semana - b.semana)
+                            .map((s, idx) => (
+                              <li key={idx} className="list-group-item py-2">
+                                <strong className="text-dark">Semana {s.semana}:</strong> <br />
+                                <small className="text-secondary">{s.menu.join(', ')}</small>
+                              </li>
+                            ))}
+                        </ul>
+                      </details>
+                    )}
+                    {/* BOTONES DE ACCIÓN SOLO PARA ADMIN */}
+                    {isAdmin && (
+                      <div className="d-flex gap-2 mt-auto pt-2 border-top">
+                        <button
+                          className="btn btn-outline-primary btn-sm flex-fill"
+                          onClick={() => handleEditarDieta(dieta)}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          className="btn btn-outline-danger btn-sm flex-fill"
+                          onClick={() => handleEliminarDieta(dieta._id || dieta.id || '')}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))
-          ) : (
-            <p className="col-12 text-center alert alert-info py-4">
-              ✨ ¡No hay dietas registradas aún! {isAdmin && 'Usa el formulario de arriba para añadir la primera.'}
-            </p>
-          )}
+              </div>
+            ))}
         </div>
+      ) : (
+        <p className="col-12 text-center alert alert-info py-4">
+          ✨ ¡No hay dietas registradas aún! {isAdmin && 'Usa el formulario de arriba para añadir la primera.'}
+        </p>
       )}
     </div>
   );

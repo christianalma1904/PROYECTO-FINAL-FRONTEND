@@ -10,18 +10,21 @@ export interface Paciente {
   email: string;
   password?: string;
   rol?: string;
+  // Si tu backend usa _id en lugar de id, puedes añadirlo aquí también:
+  _id?: string;
 }
 
-// Función utilitaria para manejar errores de la API
-async function parseApiError(res: Response, defaultMsg: string) {
-  let errorMsg = defaultMsg;
-  try {
-    const data = await res.json();
-    errorMsg = data?.message || defaultMsg;
-  } catch {
-    // No hacer nada, usar mensaje por defecto
+// Función auxiliar para manejar errores de fetch (similar a handleResponse en dietas.ts)
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: 'Error desconocido del servidor o respuesta no JSON' }));
+    // Si hay un status 401, lo indicamos explícitamente para un mejor manejo en el frontend
+    if (res.status === 401) {
+      throw new Error(`401 Unauthorized: ${errorBody.message || 'Credenciales inválidas o token expirado.'}`);
+    }
+    throw new Error(errorBody.message || `Error en la solicitud: ${res.status} ${res.statusText}`);
   }
-  throw new Error(errorMsg);
+  return res.json();
 }
 
 // Obtener todos los pacientes
@@ -29,56 +32,42 @@ export async function getPacientes(): Promise<Paciente[]> {
   const res = await fetch(`${API}/pacientes`, {
     headers: getAuthHeaders(),
   });
-
-  if (!res.ok) {
-    await parseApiError(res, 'Error al obtener pacientes.');
-  }
-  return res.json();
+  return handleResponse<Paciente[]>(res); // Usar la nueva función de manejo de respuesta
 }
 
 // Crear un paciente
-export async function createPaciente(paciente: Partial<Paciente>) {
+export async function createPaciente(paciente: Partial<Paciente>): Promise<Paciente> { // Añadido Promise<Paciente> para tipado
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/pacientes`, {
     method: 'POST',
     headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
+      ...headers, // getAuthHeaders ya incluye 'Content-Type'
+      // 'Content-Type': 'application/json', // <--- Eliminado: ya está en getAuthHeaders
     },
     body: JSON.stringify(paciente),
   });
-
-  if (!res.ok) {
-    await parseApiError(res, 'Error al crear paciente.');
-  }
-  return res.json();
+  return handleResponse<Paciente>(res); // Usar la nueva función de manejo de respuesta
 }
 
 // Editar/Actualizar un paciente
-export async function updatePaciente(id: number, paciente: Partial<Paciente>) {
+export async function updatePaciente(id: number | string, paciente: Partial<Paciente>): Promise<Paciente> { // id puede ser string si es _id de MongoDB
+  const headers = getAuthHeaders(); // Obtener los encabezados de autenticación
   const res = await fetch(`${API}/pacientes/${id}`, {
     method: 'PUT',
     headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
+      ...headers, // getAuthHeaders ya incluye 'Content-Type'
+      // 'Content-Type': 'application/json', // <--- Eliminado: ya está en getAuthHeaders
     },
     body: JSON.stringify(paciente),
   });
-
-  if (!res.ok) {
-    await parseApiError(res, 'Error al actualizar paciente.');
-  }
-  return res.json();
+  return handleResponse<Paciente>(res); // Usar la nueva función de manejo de respuesta
 }
 
 // Eliminar un paciente
-export async function deletePaciente(id: number) {
+export async function deletePaciente(id: number | string): Promise<{ message: string }> { // id puede ser string si es _id de MongoDB
   const res = await fetch(`${API}/pacientes/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
-
-  if (!res.ok) {
-    await parseApiError(res, 'Error al eliminar paciente.');
-  }
-  return res.json();
+  return handleResponse<{ message: string }>(res); // Usar la nueva función de manejo de respuesta
 }

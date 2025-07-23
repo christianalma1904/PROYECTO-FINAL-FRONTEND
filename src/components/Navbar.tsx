@@ -45,9 +45,12 @@ export default function AppNavbar() {
                 <Nav.Link as={Link} to="/planes" className={isActive('/planes') ? 'nav-active' : ''}>
                   Planes
                 </Nav.Link>
-                <Nav.Link as={Link} to="/dietas" className={isActive('/dietas') ? 'nav-active' : ''}>
-                  Dietas
-                </Nav.Link>
+                {/* Solo el admin puede ver Dietas */}
+                {userRole === 'admin' && (
+                  <Nav.Link as={Link} to="/dietas" className={isActive('/dietas') ? 'nav-active' : ''}>
+                    Dietas
+                  </Nav.Link>
+                )}
                 <Nav.Link as={Link} to="/pagos" className={isActive('/pagos') ? 'nav-active' : ''}>
                   Pagos
                 </Nav.Link>
@@ -60,10 +63,6 @@ export default function AppNavbar() {
                     <Nav.Link as={Link} to="/nutricionistas" className={isActive('/nutricionistas') ? 'nav-active' : ''}>
                       Nutricionistas
                     </Nav.Link>
-                    {/* Si tienes seguimiento exclusivo de admin, déjalo aquí */}
-                    {/* <Nav.Link as={Link} to="/seguimiento" className={isActive('/seguimiento') ? 'nav-active' : ''}>
-                      Seguimiento
-                    </Nav.Link> */}
                   </>
                 )}
                 <UserMenu />

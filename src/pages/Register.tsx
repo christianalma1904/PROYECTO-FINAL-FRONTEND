@@ -7,17 +7,17 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false); // Añadido estado de carga
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e: React.FormEvent) => { // Cambiado a recibir evento para usar e.preventDefault()
-    e.preventDefault(); // Previene el recargo de la página
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
-    setLoading(true); // Activa el estado de carga
+    setLoading(true);
 
     if (!nombre || !email || !password) {
       setError("Todos los campos son obligatorios.");
-      setLoading(false); // Desactiva la carga si hay un error de validación local
+      setLoading(false);
       return;
     }
 
@@ -26,47 +26,53 @@ export default function Register() {
       navigate('/login');
     } catch (err: any) {
       console.error(err);
-      // Mensaje de error más específico para el usuario
       setError(err.message || "Error al registrar usuario. Por favor, inténtalo de nuevo más tarde.");
     } finally {
-      setLoading(false); // Desactiva el estado de carga al finalizar
+      setLoading(false);
     }
   };
 
   return (
-    // Usamos d-flex y flex-column para centrar verticalmente si la altura es suficiente
-    // Añadimos py-5 para un padding vertical en todos los tamaños, y px-3 para padding horizontal en móviles
-    <div className="d-flex flex-column justify-content-center align-items-center py-5 px-3" style={{ minHeight: '100vh' }}>
+    // Contenedor principal con el fondo verde degradado
+    // min-vh-100 asegura que ocupe al menos el 100% de la altura de la vista
+    // d-flex, justify-content-center, align-items-center para centrar el contenido
+    <div
+      className="d-flex justify-content-center align-items-center min-vh-100 py-5"
+      style={{
+        background: 'linear-gradient(to bottom right, #e6ffe6, #c2f0c2, #85e085)', // Degradado de verdes sutiles
+      }}
+    >
       {/*
-        Card de Bootstrap:
-        - shadow para una sombra sutil
-        - p-4 para padding interno
-        - mx-auto para centrado horizontal
-        - w-100 para que ocupe el 100% del ancho disponible
-        - maxWidth: 400px es un buen tamaño de partida
+        Card de Bootstrap para el formulario:
+        - shadow-lg: Sombra grande para un efecto de profundidad.
+        - p-4 p-md-5: Padding responsivo, más grande en pantallas medianas y superiores.
+        - rounded-4: Bordes más redondeados.
+        - bg-white: Fondo blanco para el card.
+        - w-100: Ocupa el 100% del ancho del padre.
+        - max-width: 450px: Limita el ancho máximo para que no se extienda demasiado en pantallas grandes.
       */}
-      <div className="card shadow p-4" style={{ maxWidth: '400px', width: '100%' }}>
-        <h2 className="text-center mb-4">Registro de Usuario</h2>
+      <div className="card shadow-lg p-4 p-md-5 bg-white rounded-4" style={{ maxWidth: '450px', width: '100%' }}>
+        <h2 className="text-center mb-4 fw-bold text-success">Regístrate</h2> {/* Título con color verde */}
 
         {error && (
-          <div className="alert alert-danger text-center animate__animated animate__fadeIn mb-3" role="alert">
+          <div className="alert alert-danger text-center animate__animated animate__fadeIn mb-4" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleRegister}> {/* Usar onSubmit en el form y vincularlo al handler */}
+        <form onSubmit={handleRegister}>
           <div className="mb-3">
             <label htmlFor="nombreInput" className="form-label visually-hidden">Nombre completo</label>
             <input
               type="text"
-              className="form-control form-control-lg" // form-control-lg para campos más grandes
+              className="form-control form-control-lg" // Campos grandes
               id="nombreInput"
-              placeholder="Juan Pérez"
+              placeholder="Nombre completo" // Placeholder actualizado
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
               aria-label="Nombre completo"
-              autoComplete="name" // Autocompletado para el nombre
+              autoComplete="name"
             />
           </div>
 
@@ -74,33 +80,33 @@ export default function Register() {
             <label htmlFor="emailInput" className="form-label visually-hidden">Correo electrónico</label>
             <input
               type="email"
-              className="form-control form-control-lg" // form-control-lg para campos más grandes
+              className="form-control form-control-lg" // Campos grandes
               id="emailInput"
-              placeholder="ejemplo@correo.com"
+              placeholder="Correo electrónico" // Placeholder actualizado
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               aria-label="Correo electrónico"
-              autoComplete="email" // Autocompletado para el email
+              autoComplete="email"
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-4"> {/* mb-4 para más espacio antes del botón */}
             <label htmlFor="passwordInput" className="form-label visually-hidden">Contraseña</label>
             <input
               type="password"
-              className="form-control form-control-lg" // form-control-lg para campos más grandes
+              className="form-control form-control-lg" // Campos grandes
               id="passwordInput"
-              placeholder="********"
+              placeholder="Contraseña" // Placeholder actualizado
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               aria-label="Contraseña"
-              autoComplete="new-password" // Sugerencia para nueva contraseña
+              autoComplete="new-password"
             />
           </div>
 
-          <button type="submit" className="btn btn-success btn-lg w-100" disabled={loading}>
+          <button type="submit" className="btn btn-success btn-lg w-100 py-2 fw-bold" disabled={loading}>
             {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -112,9 +118,9 @@ export default function Register() {
           </button>
         </form>
 
-        {/* Enlace para volver al login */}
-        <p className="text-center mt-3">
-          ¿Ya tienes una cuenta? <a href="/login">Inicia sesión aquí</a>
+        {/* Enlace para volver al login con estilo similar al diseño */}
+        <p className="text-center mt-4 text-muted">
+          ¿Ya tienes una cuenta? <a href="/login" className="text-decoration-none text-success fw-semibold">Inicia sesión aquí</a>
         </p>
       </div>
     </div>
